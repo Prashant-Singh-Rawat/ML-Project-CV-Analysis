@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CultureFit AI | 3D Analysis</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        :root { --accent: #a78bfa; --bg: #0b0e14; --glass: rgba(255, 255, 255, 0.05); }
+        body { background-color: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; display: grid; grid-template-columns: 400px 1fr; gap: 20px; }
+        .card { background: var(--glass); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 30px; backdrop-filter: blur(10px); }
+        .purple { color: var(--accent); text-shadow: 0 0 10px var(--accent); }
+        h1 { font-size: 1.8rem; margin-bottom: 20px; }
+        input, textarea { width: 100%; background: #161b22; border: 1px solid #30363d; color: white; padding: 12px; border-radius: 10px; margin: 10px 0 20px 0; box-sizing: border-box; }
+        button { background: var(--accent); color: #000; border: none; width: 100%; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #c4b5fd; transform: translateY(-2px); }
+        #chart { width: 100%; height: 550px; }
+        .result-box { text-align: center; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>Culture<span class="purple">Fit</span> AI</h1>
+            <form action="/predict" method="POST">
+                <label>Behavioral Answer (NLP Pillars)</label>
+                <textarea name="behavioral_text" rows="5" placeholder="Tell us about a time you led a project..." required></textarea>
+                
+                <label>Psychometric Score (1-100)</label>
+                <input type="number" name="test_score" required>
+                
+                <label>Collaboration Preference (1-10)</label>
+                <input type="number" name="collaboration" min="1" max="10" required>
+                
+                <label>Adaptability Quotient (1-10)</label>
+                <input type="number" name="adaptability" min="1" max="10" required>
+                
+                <button type="submit">ANALYZE COMPATIBILITY</button>
+            </form>
+        </div>
+
+        <div class="card">
+            {% if results %}
+                <div class="result-box">
+                    <h2>Overall Match: <span class="purple">{{ results.final_score }}%</span></h2>
+                </div>
+                <div id="chart"></div>
+                
+                <script>
+                    var trace1 = {
+                        x: {{ results.past_x|tojson }}, y: {{ results.past_y|tojson }}, z: {{ results.past_z|tojson }},
+                        mode: 'markers', type: 'scatter3d', name: 'Company Benchmark',
+                        marker: { size: 5, color: '#4b5563', opacity: 0.4 }
+                    };
+
+                    var trace2 = {
+                        x: [{{ results.cand_x }}], y: [{{ results.cand_y }}], z: [{{ results.cand_z }}],
+                        mode: 'markers', type: 'scatter3d', name: 'Your Vector',
+                        marker: { size: 12, color: '#a78bfa', symbol: 'diamond' }
+                    };
+
+                    var layout = {
+                        margin: {l:0, r:0, b:0, t:0},
+                        paper_bgcolor: 'rgba(0,0,0,0)',
+                        scene: {
+                            xaxis: {title: 'Adaptability', color: '#fff'},
+                            yaxis: {title: 'Collaboration', color: '#fff'},
+                            zaxis: {title: 'Leadership', color: '#fff'}
+                        },
+                        legend: { font: {color: '#fff'} }
+                    };
+
+                    Plotly.newPlot('chart', [trace1, trace2], layout);
+                </script>
+            {% else %}
+                <div style="text-align: center; padding-top: 150px; opacity: 0.3;">
+                    <h3>Submit the behavioral survey to visualize the 3D Cultural Fit.</h3>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

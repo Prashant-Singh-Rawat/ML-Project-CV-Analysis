@@ -1,0 +1,10 @@
+fastapi==0.110.0
+uvicorn==0.27.1
+scikit-learn==1.4.1.post1
+spacy==3.7.2
+pandas==2.2.1
+pydantic==2.6.3
+python-multipart==0.0.9
+pdfplumber==0.11.0
+
+
