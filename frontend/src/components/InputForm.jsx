@@ -58,11 +58,12 @@ const CompanyDropdown = ({ value, onChange, companies }) => {
         id="company-dropdown-trigger"
         type="button"
         onClick={() => setOpen(o => !o)}
-        className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all text-left border ${
-          open 
-            ? 'bg-black border-violet-500/50 shadow-[0_0_20px_rgba(139,92,246,0.15)]' 
-            : 'bg-black/40 border-white/10 hover:border-white/20'
-        }`}
+        className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all text-left border"
+        style={{
+          backgroundColor: open ? '#000000' : 'rgba(0,0,0,0.4)',
+          borderColor: open ? 'rgba(139,92,246,0.8)' : 'rgba(255,255,255,0.1)',
+          boxShadow: open ? '0 0 20px rgba(139,92,246,0.3)' : 'none',
+        }}
       >
         {selected ? (
           <>
@@ -80,14 +81,18 @@ const CompanyDropdown = ({ value, onChange, companies }) => {
         )}
         <FiChevronDown
           size={18}
-          className={`text-gray-400 shrink-0 transition-transform duration-300 ${open ? 'rotate-180 text-violet-400' : ''}`}
+          className={`shrink-0 transition-transform duration-300 ${open ? 'rotate-180 text-violet-400' : 'text-gray-400'}`}
         />
       </button>
 
       {/* Dropdown Panel */}
       {open && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-black border border-white/10 rounded-2xl shadow-[0_25px_70px_rgba(0,0,0,0.8)] overflow-hidden animate-dropdown-fade-in"
-             style={{ zIndex: 1001 }}>
+        <div className="absolute top-full left-0 right-0 mt-2 rounded-2xl shadow-[0_25px_70px_rgba(0,0,0,0.9)] overflow-hidden animate-dropdown-fade-in"
+             style={{ 
+               zIndex: 1001, 
+               backgroundColor: '#000000', 
+               border: '1px solid rgba(255,255,255,0.15)' 
+             }}>
           {/* Search inside dropdown */}
           {companies.length > 5 && (
             <div className="p-2.5 border-b border-white/5 bg-white/[0.01]">
@@ -99,14 +104,15 @@ const CompanyDropdown = ({ value, onChange, companies }) => {
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   placeholder="Search company..."
-                  className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-violet-500/50 transition-all font-medium"
+                  className="w-full rounded-lg py-2 pl-9 pr-3 text-sm text-white outline-none transition-all font-medium"
+                  style={{ backgroundColor: '#111', border: '1px solid rgba(255,255,255,0.15)' }}
                 />
               </div>
             </div>
           )}
 
           {/* Company List */}
-          <div className="max-h-60 overflow-y-auto p-1.5 custom-scrollbar">
+          <div className="max-h-60 overflow-y-auto p-1.5 custom-scrollbar" style={{ backgroundColor: '#000000' }}>
             {filtered.length === 0 ? (
               <div className="py-8 text-center text-gray-500 text-sm">
                 No companies found
@@ -124,9 +130,13 @@ const CompanyDropdown = ({ value, onChange, companies }) => {
                     setOpen(false);
                     setSearch('');
                   }}
-                  className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all text-left mb-0.5 last:mb-0 ${
-                    isSelected ? 'bg-violet-500/20' : 'hover:bg-white/5'
-                  }`}
+                  className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all text-left mb-0.5 last:mb-0`}
+                  style={{ 
+                    backgroundColor: isSelected ? 'rgba(139,92,246,0.3)' : 'transparent',
+                    border: isSelected ? '1px solid rgba(139,92,246,0.4)' : 'none'
+                  }}
+                  onMouseEnter={e => { if (!isSelected) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)'; }}
+                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent'; }}
                 >
                   <span className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0 text-lg"
                         style={{ background: m.bg }}>
@@ -137,7 +147,7 @@ const CompanyDropdown = ({ value, onChange, companies }) => {
                       {company}
                     </div>
                     {isSelected && (
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-violet-400 mt-0.5">Selected ✓</div>
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-violet-400 mt-0.5">Verified Choice ✓</div>
                     )}
                   </div>
                   {isSelected && (
@@ -156,9 +166,8 @@ const CompanyDropdown = ({ value, onChange, companies }) => {
           to { opacity: 1; transform: translateY(0); }
         }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #000; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
       `}</style>
     </div>
   );
@@ -245,7 +254,10 @@ const InputForm = ({ onAnalyze, isLoading, companies }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!cvFile || !cgpa || !targetCompany || !githubUrl) return;
+    if (!cvFile || !cgpa || !targetCompany || !githubUrl) {
+      alert("Please fill in ALL mandatory fields including Resume, CGPA, Target Company, and GitHub Profile.");
+      return;
+    }
     onAnalyze({ cv_file: cvFile, cgpa: parseFloat(cgpa), target_company: targetCompany, github_url: githubUrl });
   };
 
@@ -452,6 +464,10 @@ const InputForm = ({ onAnalyze, isLoading, companies }) => {
             {!cvFile ? '📄 Upload a PDF resume' : !cgpa ? '🎓 Enter your CGPA' : !targetCompany ? '🏢 Select a target company' : '🐙 Link your GitHub'} to continue
           </p>
         )}
+        
+        <div className="text-center mt-6 pt-4 border-t border-white/5">
+          <p className="text-[10px] text-gray-700 font-mono tracking-widest uppercase">Verification Engine v2.5.3 - SECURE DEPLOYMENT</p>
+        </div>
       </form>
     </div>
   );
