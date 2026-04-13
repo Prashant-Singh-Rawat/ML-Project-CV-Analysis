@@ -91,6 +91,9 @@ function App() {
       formData.append('cv_file', data.cv_file);
       formData.append('cgpa', data.cgpa);
       formData.append('target_company', data.target_company);
+      if (data.github_url) {
+        formData.append('github_url', data.github_url);
+      }
 
       const token = localStorage.getItem('tonycv_token');
       const response = await axios.post(`${API_BASE_URL}/analyze`, formData, {
