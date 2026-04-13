@@ -90,9 +90,13 @@ const CompanyDropdown = ({ value, onChange, companies }) => {
         <div className="absolute top-full left-0 right-0 mt-2 rounded-2xl shadow-[0_25px_70px_rgba(0,0,0,0.9)] overflow-hidden animate-dropdown-fade-in"
              style={{ 
                zIndex: 1001, 
-               backgroundColor: '#000000', 
-               border: '1px solid rgba(255,255,255,0.15)' 
-             }}>
+                backgroundColor: '#000000 !important', 
+                border: '1px solid rgba(255,255,255,0.15)' 
+              }}>
+          {/* Version Indicator */}
+          <div className="px-4 py-2 text-[9px] font-bold text-violet-400/50 uppercase tracking-widest border-b border-white/5">
+            Verification Stack v2.5.3
+          </div>
           {/* Search inside dropdown */}
           {companies.length > 5 && (
             <div className="p-2.5 border-b border-white/5 bg-white/[0.01]">

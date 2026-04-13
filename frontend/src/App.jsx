@@ -128,10 +128,15 @@ function App() {
     { icon: <FiZap />,      title: 'Instant Results', desc: 'Real-time processing' },
   ];
 
-  // ── Auth gate ─────────────────────────────────────────────────────────────────
+  // ── Auth gate REMOVED as requested ──────────────────────────────────────────
+  /*
   if (!authUser) {
     return <AuthPage onAuthSuccess={(user) => setAuthUser(user)} />;
   }
+  */
+
+  // Using a mock user to avoid breaking existing logic that expects authUser
+  const activeUser = authUser || { name: 'User', email: 'guest@example.com' };
 
   // ── Main App ──────────────────────────────────────────────────────────────────
   return (
@@ -164,24 +169,7 @@ function App() {
             />
           </div>
 
-          {/* User Info + Logout */}
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg"
-              style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)' }}>
-              <FiUser size={13} style={{ color: '#a78bfa' }} />
-              <span className="text-xs font-semibold" style={{ color: '#a78bfa' }}>
-                {authUser.name}
-              </span>
-            </div>
-            <button
-              onClick={handleLogout}
-              title="Sign out"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-red-400 transition-all"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
-            >
-              <FiLogOut size={13} /> Logout
-            </button>
-          </div>
+          {/* Removed User Info + Logout as auth is no longer used */}
         </div>
       </nav>
 

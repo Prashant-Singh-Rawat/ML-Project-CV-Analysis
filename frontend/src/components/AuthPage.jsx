@@ -244,7 +244,7 @@ const AuthPage = ({ onAuthSuccess }) => {
             <div style={{ fontSize: '22px', fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>
               Tony<span style={{ background: 'linear-gradient(135deg,#a78bfa,#818cf8,#38bdf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>CV</span>
             </div>
-            <div style={{ fontSize: '11px', color: '#6b7280', letterSpacing: '1px', textTransform: 'uppercase' }}>AI Engine v2.0</div>
+            <div style={{ fontSize: '11px', color: '#6b7280', letterSpacing: '1px', textTransform: 'uppercase' }}>AI Engine v2.5.3 SECURE</div>
           </div>
         </div>
 
