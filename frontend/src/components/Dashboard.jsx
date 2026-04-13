@@ -997,7 +997,8 @@ const Dashboard = ({ result, metrics, onBack }) => {
                         <FiAlertTriangle className="mt-0.5" color={vuln.severity === 'High' ? '#ef4444' : vuln.severity === 'Medium' ? '#f59e0b' : '#3b82f6'} />
                         <div>
                           <span className="text-[10px] uppercase font-bold tracking-widest text-gray-400">{vuln.severity} Risk</span>
-                          <p className="text-xs text-white mt-0.5">{vuln.issue}</p>
+                          <p className="text-xs text-white mt-0.5 font-semibold">{vuln.issue}</p>
+                          {vuln.detail && <p className="text-[10px] text-gray-400 mt-1 leading-relaxed">{vuln.detail}</p>}
                         </div>
                      </div>
                    ))}

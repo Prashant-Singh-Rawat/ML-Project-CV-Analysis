@@ -31,14 +31,16 @@ const CompanyDropdown = ({ value, onChange, companies }) => {
         setSearch('');
       }
     };
-    document.addEventListener('mousedown', handler);
+    if (open) {
+      document.addEventListener('mousedown', handler);
+    }
     return () => document.removeEventListener('mousedown', handler);
-  }, []);
+  }, [open]);
 
   // Focus search when opened
   useEffect(() => {
     if (open && searchRef.current) {
-      setTimeout(() => searchRef.current?.focus(), 60);
+      setTimeout(() => searchRef.current?.focus(), 100);
     }
   }, [open]);
 
@@ -50,99 +52,63 @@ const CompanyDropdown = ({ value, onChange, companies }) => {
   const meta = selected ? (COMPANY_META[selected] || { color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)', icon: '🏢' }) : null;
 
   return (
-    <div ref={dropdownRef} style={{ position: 'relative', width: '100%' }}>
+    <div ref={dropdownRef} className="relative w-full" style={{ zIndex: open ? 1000 : 1 }}>
       {/* Trigger */}
       <button
         id="company-dropdown-trigger"
         type="button"
         onClick={() => setOpen(o => !o)}
-        style={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          padding: '13px 14px',
-          background: open ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.04)',
-          border: `1px solid ${open ? 'rgba(139,92,246,0.55)' : 'rgba(255,255,255,0.09)'}`,
-          boxShadow: open ? '0 0 0 3px rgba(139,92,246,0.12)' : 'none',
-          borderRadius: '12px',
-          cursor: 'pointer',
-          color: selected ? '#e5e7eb' : '#4b5563',
-          fontSize: '14px',
-          fontWeight: selected ? 600 : 400,
-          transition: 'all 0.2s ease',
-          textAlign: 'left',
-        }}
+        className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all text-left border ${
+          open 
+            ? 'bg-black border-violet-500/50 shadow-[0_0_20px_rgba(139,92,246,0.15)]' 
+            : 'bg-black/40 border-white/10 hover:border-white/20'
+        }`}
       >
         {selected ? (
           <>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: '28px', height: '28px', borderRadius: '8px',
-              background: meta.bg, flexShrink: 0, fontSize: '16px',
-            }}>
+            <span className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0 text-lg shadow-inner" 
+                  style={{ background: meta.bg }}>
               {meta.icon}
             </span>
-            <span style={{ flex: 1 }}>{selected}</span>
+            <span className="flex-1 text-white font-bold truncate">{selected}</span>
           </>
         ) : (
           <>
-            <FiBriefcase size={16} style={{ color: '#4b5563', flexShrink: 0 }} />
-            <span style={{ flex: 1 }}>Select a company...</span>
+            <FiBriefcase size={18} className="text-gray-500 shrink-0" />
+            <span className="flex-1 text-gray-500 font-medium">Select a company...</span>
           </>
         )}
         <FiChevronDown
-          size={16}
-          style={{
-            color: '#6b7280', flexShrink: 0,
-            transition: 'transform 0.2s ease',
-            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-          }}
+          size={18}
+          className={`text-gray-400 shrink-0 transition-transform duration-300 ${open ? 'rotate-180 text-violet-400' : ''}`}
         />
       </button>
 
       {/* Dropdown Panel */}
       {open && (
-        <div style={{
-          position: 'absolute',
-          top: 'calc(100% + 6px)',
-          left: 0, right: 0,
-          background: '#111420',
-          border: '1px solid rgba(255,255,255,0.10)',
-          borderRadius: '14px',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.1)',
-          zIndex: 999,
-          overflow: 'hidden',
-          animation: 'dropdownFadeIn 0.15s ease-out',
-        }}>
+        <div className="absolute top-full left-0 right-0 mt-2 bg-black border border-white/10 rounded-2xl shadow-[0_25px_70px_rgba(0,0,0,0.8)] overflow-hidden animate-dropdown-fade-in"
+             style={{ zIndex: 1001 }}>
           {/* Search inside dropdown */}
           {companies.length > 5 && (
-            <div style={{ padding: '10px 10px 6px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ position: 'relative' }}>
-                <FiSearch size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#6b7280' }} />
+            <div className="p-2.5 border-b border-white/5 bg-white/[0.01]">
+              <div className="relative">
+                <FiSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
                   ref={searchRef}
                   type="text"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   placeholder="Search company..."
-                  style={{
-                    width: '100%', boxSizing: 'border-box',
-                    padding: '8px 10px 8px 30px',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: '8px',
-                    color: '#e5e7eb', fontSize: '13px', outline: 'none',
-                  }}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-violet-500/50 transition-all font-medium"
                 />
               </div>
             </div>
           )}
 
           {/* Company List */}
-          <div style={{ maxHeight: '260px', overflowY: 'auto', padding: '6px' }}>
+          <div className="max-h-60 overflow-y-auto p-1.5 custom-scrollbar">
             {filtered.length === 0 ? (
-              <div style={{ padding: '16px', textAlign: 'center', color: '#6b7280', fontSize: '13px' }}>
+              <div className="py-8 text-center text-gray-500 text-sm">
                 No companies found
               </div>
             ) : filtered.map(company => {
@@ -152,45 +118,30 @@ const CompanyDropdown = ({ value, onChange, companies }) => {
                 <button
                   key={company}
                   type="button"
-                  id={`company-option-${company.toLowerCase()}`}
+                  id={`company-option-${company.toLowerCase().replace(/\s+/g, '-')}`}
                   onClick={() => {
                     onChange(company);
                     setOpen(false);
                     setSearch('');
                   }}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '9px 10px',
-                    borderRadius: '9px',
-                    border: 'none',
-                    background: isSelected ? `${m.bg}` : 'transparent',
-                    cursor: 'pointer',
-                    transition: 'background 0.15s',
-                    textAlign: 'left',
-                  }}
-                  onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
-                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
+                  className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all text-left mb-0.5 last:mb-0 ${
+                    isSelected ? 'bg-violet-500/20' : 'hover:bg-white/5'
+                  }`}
                 >
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    width: '30px', height: '30px', borderRadius: '8px',
-                    background: m.bg, flexShrink: 0, fontSize: '17px',
-                  }}>
+                  <span className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0 text-lg"
+                        style={{ background: m.bg }}>
                     {m.icon}
                   </span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ color: isSelected ? '#e5e7eb' : '#d1d5db', fontWeight: isSelected ? 700 : 500, fontSize: '14px' }}>
+                  <div className="flex-1 min-w-0">
+                    <div className={`text-sm font-medium truncate ${isSelected ? 'text-white' : 'text-gray-300'}`}>
                       {company}
                     </div>
                     {isSelected && (
-                      <div style={{ color: m.color, fontSize: '11px', fontWeight: 600 }}>Selected ✓</div>
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-violet-400 mt-0.5">Selected ✓</div>
                     )}
                   </div>
                   {isSelected && (
-                    <FiCheck size={15} style={{ color: m.color, flexShrink: 0 }} />
+                    <FiCheck size={16} className="text-violet-400 shrink-0" />
                   )}
                 </button>
               );
@@ -200,10 +151,14 @@ const CompanyDropdown = ({ value, onChange, companies }) => {
       )}
 
       <style>{`
-        @keyframes dropdownFadeIn {
-          from { opacity: 0; transform: translateY(-6px); }
-          to   { opacity: 1; transform: translateY(0); }
+        @keyframes dropdown-fade-in {
+          from { opacity: 0; transform: translateY(-8px); }
+          to { opacity: 1; transform: translateY(0); }
         }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
       `}</style>
     </div>
   );
@@ -290,7 +245,7 @@ const InputForm = ({ onAnalyze, isLoading, companies }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!cvFile || !cgpa || !targetCompany) return;
+    if (!cvFile || !cgpa || !targetCompany || !githubUrl) return;
     onAnalyze({ cv_file: cvFile, cgpa: parseFloat(cgpa), target_company: targetCompany, github_url: githubUrl });
   };
 
@@ -298,7 +253,11 @@ const InputForm = ({ onAnalyze, isLoading, companies }) => {
     e.preventDefault();
     setDragOver(false);
     const file = e.dataTransfer.files[0];
-    if (file && file.name.endsWith('.pdf')) setCvFile(file);
+    if (file && file.type === 'application/pdf') {
+      setCvFile(file);
+    } else {
+      alert("Please upload a PDF file.");
+    }
   };
 
   const supportsVoice = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
@@ -457,7 +416,7 @@ const InputForm = ({ onAnalyze, isLoading, companies }) => {
             <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="14" width="14" xmlns="http://www.w3.org/2000/svg">
               <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
             </svg>
-            GitHub Profile / Repo URL <span className="text-gray-600 text-xs">(optional)</span>
+            GitHub Profile / Repo URL <span className="text-violet-400 text-xs">(mandatory for verification)</span>
           </label>
           <input
             type="url"
@@ -465,13 +424,14 @@ const InputForm = ({ onAnalyze, isLoading, companies }) => {
             placeholder="e.g. https://github.com/username"
             value={githubUrl}
             onChange={(e) => setGithubUrl(e.target.value)}
+            required
           />
         </div>
 
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={isLoading || !cvFile || !cgpa || !targetCompany}
+          disabled={isLoading || !cvFile || !cgpa || !targetCompany || !githubUrl}
           className="btn-primary w-full flex items-center justify-center gap-2 text-base"
         >
           {isLoading ? (
@@ -487,9 +447,9 @@ const InputForm = ({ onAnalyze, isLoading, companies }) => {
         </button>
 
         {/* Validation hint */}
-        {(!cvFile || !cgpa || !targetCompany) && (
+        {(!cvFile || !cgpa || !targetCompany || !githubUrl) && (
           <p className="text-center text-gray-600 text-xs">
-            {!cvFile ? '📄 Upload a PDF resume' : !cgpa ? '🎓 Enter your CGPA' : '🏢 Select a target company'} to continue
+            {!cvFile ? '📄 Upload a PDF resume' : !cgpa ? '🎓 Enter your CGPA' : !targetCompany ? '🏢 Select a target company' : '🐙 Link your GitHub'} to continue
           </p>
         )}
       </form>
