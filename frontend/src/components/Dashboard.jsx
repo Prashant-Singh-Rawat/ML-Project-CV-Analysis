@@ -352,6 +352,7 @@ const Dashboard = ({ result, metrics, onBack }) => {
   const [isBiometricOpen, setIsBiometricOpen] = useState(false);
   const [isMinting, setIsMinting] = useState(false);
   const [mintTxHash, setMintTxHash] = useState(null);
+  const [activeTab, setActiveTab] = useState('overview');
 
   // Adaptive Learning: track learned skills with localStorage
   const [learnedSkills, setLearnedSkills] = useState(() => {
@@ -604,9 +605,32 @@ const Dashboard = ({ result, metrics, onBack }) => {
         )}
       </div>
 
+      {/* Dynamic Tab Navigation */}
+      <div className="flex flex-wrap items-center gap-2 mb-2 p-1.5 rounded-2xl" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+        {[
+          { id: 'overview', icon: <FiBarChart2 />, label: 'Overview' },
+          { id: 'verification', icon: <FiShield />, label: 'Verification' },
+          { id: 'upskilling', icon: <FiBookOpen />, label: 'Learning' },
+          { id: 'insights', icon: <FiTarget />, label: 'Insights' },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === tab.id ? 'bg-violet-600 shadow-[0_0_20px_rgba(124,58,237,0.3)] text-white border border-violet-500/50' : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'}`}
+          >
+            {tab.icon} <span className="hidden sm:inline">{tab.label}</span>
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        {/* ====== Placement Gauge ====== */}
+        {/* ================================================================================================= */}
+        {/*                                        OVERVIEW TAB                                               */}
+        {/* ================================================================================================= */}
+        {activeTab === 'overview' && (
+          <>
+            {/* ====== Placement Gauge ====== */}
         <div className="glass-card p-8 flex flex-col items-center justify-center animate-fade-in-up md:col-span-1">
           <h3 className="text-lg font-bold text-white mb-6">Placement Probability</h3>
           <div className="relative w-56 h-28">
@@ -758,10 +782,12 @@ const Dashboard = ({ result, metrics, onBack }) => {
                </ul>
              </div>
           </div>
-        </div>
+        )}
 
-
-        {/* ====== SECTION 1: REASONS FOR LOW PERCENTAGE ====== */}
+        {/* (Reasons for Low Percentage moved back to Overview Tab logically, or isolated. Let's keep it in OVERVIEW logic. Since it's huge, I'll close Verification here and reopen Overview for the reasons.) */}
+        {activeTab === 'overview' && (
+          <>
+            {/* ====== SECTION 1: REASONS FOR LOW PERCENTAGE ====== */}
         <div className="glass-card p-8 lg:col-span-2 animate-fade-in-up delay-300" style={{ opacity: 0 }}>
           <div className="flex items-center gap-3 mb-6 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
             <div className="p-2.5 rounded-xl" style={{ background: 'rgba(239, 68, 68, 0.12)' }}>
@@ -800,9 +826,15 @@ const Dashboard = ({ result, metrics, onBack }) => {
             })}
           </div>
         </div>
+        </>
+        )}
 
-
-        {/* ====== SECTION 2: SKILLS TO IMPROVE (BAR CHART) ====== */}
+        {/* ================================================================================================= */}
+        {/*                                      UPSKILLING TAB                                               */}
+        {/* ================================================================================================= */}
+        {activeTab === 'upskilling' && (
+          <>
+            {/* ====== SECTION 2: SKILLS TO IMPROVE (BAR CHART) ====== */}
         {missing_skills.length > 0 && (
           <div className="glass-card p-8 lg:col-span-2 animate-fade-in-up delay-400" style={{ opacity: 0 }}>
             <div className="flex items-center gap-3 mb-6 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
@@ -1247,7 +1279,14 @@ const Dashboard = ({ result, metrics, onBack }) => {
             </div>
           </div>
         )}
+        </>
+        )}
 
+        {/* ================================================================================================= */}
+        {/*                                       INSIGHTS TAB                                                */}
+        {/* ================================================================================================= */}
+        {activeTab === 'insights' && (
+          <>
         {/* ====== RESUME NLP HEATMAP ====== */}
         {result.cv_text && (
           <div className="lg:col-span-2">
@@ -1259,6 +1298,8 @@ const Dashboard = ({ result, metrics, onBack }) => {
         <div className="lg:col-span-2">
           <CareerPathTree matchedSkills={matched_skills} />
         </div>
+          </>
+        )}
 
       </div>
     </div>
