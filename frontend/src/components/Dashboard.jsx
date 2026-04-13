@@ -1203,7 +1203,9 @@ const Dashboard = ({ result, metrics, onBack }) => {
                 <div className="text-gray-500 text-[10px] uppercase tracking-wider mt-1">Hours Remaining</div>
               </div>
               <div className="stat-card text-center">
-                <div className="text-2xl font-black" style={{ color: projectedScore > placement_probability ? '#10b981' : '#6b7280' }}>+{projectedScore - placement_probability}%</div>
+                <div className="text-2xl font-black" style={{ color: projectedScore > placement_probability ? '#10b981' : '#6b7280' }}>
+                  {projectedScore > placement_probability ? '+' : ''}{Math.round(projectedScore - placement_probability)}%
+                </div>
                 <div className="text-gray-500 text-[10px] uppercase tracking-wider mt-1">Score Boost</div>
               </div>
             </div>
