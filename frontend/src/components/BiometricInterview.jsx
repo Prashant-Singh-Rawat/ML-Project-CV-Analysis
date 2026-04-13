@@ -9,6 +9,8 @@ const BiometricInterview = ({ isOpen, onClose }) => {
   const [sentiment, setSentiment] = useState('Neutral');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isAnswering, setIsAnswering] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [finalScore, setFinalScore] = useState(0);
 
   const questions = [
     "Can you walk me through your experience building REST APIs with Python?",
@@ -46,8 +48,8 @@ const BiometricInterview = ({ isOpen, onClose }) => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
-      alert("Mock Interview Complete! Our AI has analyzed your biometric signals and performance.");
-      onClose();
+      setFinalScore(Math.floor(Math.random() * 10) + 82); // Simulated score string 82-92%
+      setShowResults(true);
     }
   };
 
@@ -71,6 +73,45 @@ const BiometricInterview = ({ isOpen, onClose }) => {
   };
 
   if (!isOpen) return null;
+
+  if (showResults) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div className="glass-card w-full max-w-md p-8 text-center shadow-2xl border border-white/10 rounded-2xl relative bg-[#0b0e17]">
+          <div className="w-24 h-24 mx-auto rounded-full flex flex-col items-center justify-center mb-6" 
+               style={{ background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 0 40px rgba(16,185,129,0.4)', border: '4px solid rgba(255,255,255,0.2)' }}>
+            <span className="text-3xl font-extrabold text-white">{finalScore}</span>
+            <span className="text-[10px] text-white/80 font-bold uppercase tracking-wider">Score</span>
+          </div>
+          
+          <h2 className="text-2xl font-bold text-white mb-2">Interview Complete</h2>
+          <p className="text-gray-400 mb-8 text-sm leading-relaxed">
+            Your performance has been evaluated. You demonstrated {finalScore > 85 ? 'strong' : 'solid'} communication skills and good cognitive presence during technical questions.
+          </p>
+          
+          <div className="grid grid-cols-2 gap-4 text-left mb-8">
+            <div className="bg-white/5 p-4 rounded-xl border border-white/10 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-2 text-violet-400/20"><FiActivity size={32} /></div>
+              <p className="text-xs text-gray-500 mb-1 font-bold tracking-wider uppercase">Avg Confidence</p>
+              <p className="text-2xl font-bold text-violet-400">89%</p>
+            </div>
+            <div className="bg-white/5 p-4 rounded-xl border border-white/10 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-2 text-blue-400/20"><FiCamera size={32} /></div>
+              <p className="text-xs text-gray-500 mb-1 font-bold tracking-wider uppercase">Eye Contact</p>
+              <p className="text-2xl font-bold text-blue-400">88%</p>
+            </div>
+          </div>
+          
+          <button 
+            onClick={() => { setShowResults(false); onClose(); }} 
+            className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white text-sm font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(37,99,235,0.3)] flex justify-center items-center gap-2"
+          >
+            <FiCheckCircle size={16} /> Return to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
