@@ -12,6 +12,37 @@ const BiometricInterview = ({ isOpen, onClose }) => {
   const [showResults, setShowResults] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
 
+  const [transcripts, setTranscripts] = useState([]);
+  const [currentAnswer, setCurrentAnswer] = useState('');
+  const recognitionRef = useRef(null);
+
+  // Initialize Speech Recognition
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = (event) => {
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          }
+        }
+        if (finalTranscript) {
+          setCurrentAnswer(prev => prev + ' ' + finalTranscript);
+        }
+      };
+      recognitionRef.current = recognition;
+    }
+    return () => {
+      try { recognitionRef.current?.stop(); } catch(e) {}
+    }
+  }, []);
+
   const questions = [
     "Can you walk me through your experience building REST APIs with Python?",
     "How would you handle a conflict within a cross-functional engineering team?",
@@ -43,12 +74,41 @@ const BiometricInterview = ({ isOpen, onClose }) => {
     return () => clearInterval(interval);
   }, [isOpen, stream]);
 
+  const handleStartAnswering = () => {
+    setIsAnswering(true);
+    setCurrentAnswer('');
+    try { recognitionRef.current?.start(); } catch(e) {}
+  };
+
   const handleNextQuestion = () => {
+    try { recognitionRef.current?.stop(); } catch(e) {}
     setIsAnswering(false);
+    
+    const updatedTranscripts = [...transcripts, currentAnswer];
+    setTranscripts(updatedTranscripts);
+
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
-      setFinalScore(Math.floor(Math.random() * 10) + 82); // Simulated score string 82-92%
+      // Calculate actual score based on the candidate's spoken answers
+      const allText = updatedTranscripts.join(' ').toLowerCase();
+      const totalWords = allText.split(/\s+/).filter(w => w.length > 0).length;
+      
+      let score = 55; // Base showing-up score
+      
+      // Bonus for answer length
+      if (totalWords > 20) score += 10;
+      if (totalWords > 50) score += 10;
+      if (totalWords > 100) score += 10;
+      
+      // Bonus for technical/behavioral keywords
+      const keywords = ['api', 'rest', 'python', 'conflict', 'team', 'optimize', 'performance', 'cloud', 'aws', 'azure', 'experience', 'handle', 'design', 'architecture'];
+      const matchCount = keywords.filter(kw => allText.includes(kw)).length;
+      
+      score += Math.min(matchCount * 2, 12); // Max 12 points for keywords
+      score = Math.min(Math.max(score, 55), 98); // Limit between 55% and 98%
+      
+      setFinalScore(score);
       setShowResults(true);
     }
   };
@@ -171,18 +231,23 @@ const BiometricInterview = ({ isOpen, onClose }) => {
                 
                 {!isAnswering ? (
                   <button 
-                    onClick={() => setIsAnswering(true)}
+                    onClick={handleStartAnswering}
                     className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
                   >
                     <FiMic size={12} /> Start My Answer
                   </button>
                 ) : (
-                  <button 
-                    onClick={handleNextQuestion}
-                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
-                  >
-                    <FiCheckCircle size={12} /> Submit & Next Question
-                  </button>
+                  <div className="space-y-3">
+                    <div className="p-2 bg-black/40 rounded text-xs text-gray-300 italic min-h-[40px] max-h-[80px] overflow-y-auto">
+                      {currentAnswer || "Listening..."}
+                    </div>
+                    <button 
+                      onClick={handleNextQuestion}
+                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-2 animate-pulse"
+                    >
+                      <FiCheckCircle size={12} /> Submit & Next Question
+                    </button>
+                  </div>
                 )}
               </div>
 
