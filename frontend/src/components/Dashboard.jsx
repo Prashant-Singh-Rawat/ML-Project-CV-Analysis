@@ -476,9 +476,11 @@ const Dashboard = ({ result, metrics, onBack }) => {
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       };
       const generatePdf = typeof html2pdf === 'function' ? html2pdf : (html2pdf.default || window.html2pdf);
+      if (!generatePdf) throw new Error('PDF library not loaded');
       await generatePdf().set(opt).from(pdfHTML).save();
     } catch (err) {
       console.error('PDF failed:', err);
+      alert('PDF download failed: ' + (err.message || 'Please try again.'));
     } finally {
       setIsDownloading(false);
     }
@@ -621,42 +623,181 @@ const Dashboard = ({ result, metrics, onBack }) => {
         )}
 
         {activeTab === 'learning' && (
-          <div className="lg:col-span-2 space-y-6 text-left">
-            <div className="glass-card p-8">
-              <div className="flex justify-between mb-8">
-                <div>
-                  <h3 className="text-lg font-bold text-white mb-1">Adaptive Learning Roadmap</h3>
-                  <p className="text-xs text-gray-500">Skills marked as "Learned" will boost your projected score.</p>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-black text-emerald-400">+{projectedScore - placement_probability}%</div>
-                  <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Score Boost</p>
-                </div>
+          <div className="lg:col-span-2 space-y-6">
+
+            {/* ── Score Boost Banner ── */}
+            <div className="glass-card p-6 flex items-center justify-between" style={{ background: 'linear-gradient(135deg,rgba(139,92,246,0.12),rgba(16,185,129,0.08))', border: '1px solid rgba(139,92,246,0.2)' }}>
+              <div>
+                <h3 className="text-lg font-bold text-white">Adaptive Learning Roadmap</h3>
+                <p className="text-xs text-gray-400 mt-1">Tick a skill when you learn it — your score updates instantly</p>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8">
+              <div className="text-right">
+                <div className="text-3xl font-black text-emerald-400">+{Math.round(projectedScore - placement_probability)}%</div>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Projected Boost</p>
+              </div>
+            </div>
+
+            {/* ── Skill Checkboxes ── */}
+            <div className="glass-card p-8">
+              <h4 className="text-white font-bold mb-4 flex items-center gap-2"><FiAward className="text-violet-400" /> Skills to Learn</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
                 {missing_skills.map(s => (
-                  <button key={s} onClick={() => toggleLearnedSkill(s)} className={`p-4 rounded-xl flex items-center gap-3 transition-all ${learnedSkills.includes(s) ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-white/5 border-white/10'} border`}>
-                    <div className={`w-5 h-5 rounded flex items-center justify-center ${learnedSkills.includes(s) ? 'bg-emerald-500' : 'bg-white/10'}`}>{learnedSkills.includes(s) && <FiCheckCircle size={12} className="text-white"/>}</div>
-                    <span className={learnedSkills.includes(s) ? 'text-emerald-300 line-through' : 'text-white'}>{s}</span>
+                  <button key={s} onClick={() => toggleLearnedSkill(s)}
+                    className={`p-4 rounded-xl flex items-center gap-3 transition-all border text-left ${learnedSkills.includes(s) ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-white/5 border-white/10 hover:border-violet-500/40'}`}>
+                    <div className={`w-5 h-5 rounded flex-shrink-0 flex items-center justify-center ${learnedSkills.includes(s) ? 'bg-emerald-500' : 'bg-white/10'}`}>
+                      {learnedSkills.includes(s) && <FiCheckCircle size={12} className="text-white" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className={`font-semibold text-sm ${learnedSkills.includes(s) ? 'text-emerald-300 line-through' : 'text-white'}`}>{s}</span>
+                      <span className="text-gray-600 text-xs ml-2">{skillPlan.find(p => p.skill === s)?.hours || 20}h</span>
+                    </div>
+                    {learnedSkills.includes(s) && <span className="text-emerald-400 text-xs font-bold flex-shrink-0">Done ✓</span>}
                   </button>
                 ))}
               </div>
 
-              <div className="h-48">
-                <Bar data={barData} options={barOptions} />
+              {/* Progress bar */}
+              <div className="mb-2 flex justify-between text-xs text-gray-400">
+                <span>Learning Progress</span>
+                <span className="text-emerald-400 font-bold">{missing_skills.length > 0 ? Math.round((learnedCount / missing_skills.length) * 100) : 0}%</span>
+              </div>
+              <div className="h-2 rounded-full overflow-hidden bg-white/5">
+                <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-emerald-500 transition-all duration-500"
+                  style={{ width: `${missing_skills.length > 0 ? (learnedCount / missing_skills.length) * 100 : 0}%` }} />
               </div>
             </div>
 
-            <div className="glass-card p-8 flex justify-between items-center">
-              <div>
-                <h3 className="text-white font-bold">Export Career Roadmap</h3>
-                <p className="text-xs text-gray-500">Includes direct learning links for all missing skills.</p>
+            {/* ── Bar Chart ── */}
+            {skillPlan.length > 0 && (
+              <div className="glass-card p-8">
+                <h4 className="text-white font-bold mb-4 flex items-center gap-2"><FiBarChart2 className="text-yellow-400" /> Skill Improvement Roadmap</h4>
+                <p className="text-gray-500 text-xs mb-6">Prioritized skills with estimated learning hours and resources</p>
+                <div style={{ height: `${Math.max(180, skillPlan.length * 56)}px` }}>
+                  <Bar data={barData} options={barOptions} />
+                </div>
               </div>
-              <button onClick={handleDownloadPDF} disabled={isDownloading} className="px-6 py-2.5 bg-emerald-500 rounded-xl text-white font-bold text-sm flex gap-2">
-                <FiDownload /> {isDownloading ? 'Exporting...' : 'Get PDF Plan'}
+            )}
+
+            {/* ── Course Cards with Links ── */}
+            {skillPlan.length > 0 && (
+              <div className="glass-card p-8">
+                <h4 className="text-white font-bold mb-6 flex items-center gap-2"><FiBookOpen className="text-violet-400" /> Course Resources & Links</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {skillPlan.map((s, i) => (
+                    <div key={i} className="p-4 rounded-xl transition-all hover:scale-[1.01]"
+                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-black flex-shrink-0"
+                          style={{ background: 'rgba(139,92,246,0.15)', color: '#a78bfa' }}>#{i + 1}</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-white text-sm">{s.skill}</span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                              style={{ background: `${difficultyColors[s.difficulty]}18`, color: difficultyColors[s.difficulty], border: `1px solid ${difficultyColors[s.difficulty]}30` }}>
+                              {s.difficulty}
+                            </span>
+                          </div>
+                          <p className="text-gray-500 text-xs mt-0.5 truncate">{s.resource}</p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <div className="text-lg font-black text-white">{s.hours}h</div>
+                          <div className="text-gray-600 text-[10px]">est.</div>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {(s.links || []).map((link, li) => (
+                          <a key={li} href={link} target="_blank" rel="noopener noreferrer"
+                            className="text-[11px] px-3 py-1 rounded-lg font-semibold transition-all hover:opacity-80"
+                            style={{ background: 'rgba(139,92,246,0.15)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.2)' }}>
+                            🔗 {link.replace('https://', '').split('/')[0]}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-5 p-4 rounded-xl flex items-center justify-between"
+                  style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.15)' }}>
+                  <div className="flex items-center gap-2 text-violet-300 text-sm font-semibold">
+                    <FiClock size={16} /> Total time: <span className="text-white font-black">{totalUpskillHours} hours</span>
+                  </div>
+                  <div className="text-violet-400 text-xs">~{Math.ceil(totalUpskillHours / 10)} weeks at 2h/day</div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Weekly Study Routine ── */}
+            {weeklyRoutine.length > 0 && (
+              <div className="glass-card p-8">
+                <h4 className="text-white font-bold mb-6 flex items-center gap-2"><FiCalendar className="text-blue-400" /> Weekly Study Routine</h4>
+                <div className="relative">
+                  <div className="absolute left-5 top-0 bottom-0 w-px bg-blue-500/20" />
+                  <div className="space-y-5">
+                    {weeklyRoutine.map((week, i) => (
+                      <div key={i} className="relative pl-14">
+                        <div className="absolute left-3 top-1 w-5 h-5 rounded-full flex items-center justify-center"
+                          style={{ background: '#06080f', border: '2px solid #3b82f6' }}>
+                          <div className="w-2 h-2 rounded-full bg-blue-400" />
+                        </div>
+                        <div className="p-5 rounded-xl hover:scale-[1.005] transition-all"
+                          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="px-3 py-1 rounded-lg text-xs font-bold text-blue-300 bg-blue-500/15">Week {week.week}</span>
+                              <span className="text-gray-400 text-xs">Focus: <span className="text-white font-semibold">{week.focus.join(' & ')}</span></span>
+                            </div>
+                            <span className="text-gray-500 text-xs flex items-center gap-1"><FiClock size={11} /> {week.dailyHours}h/day</span>
+                          </div>
+                          <div className="space-y-1.5 mb-3">
+                            {week.tasks.map((task, j) => (
+                              <div key={j} className="flex items-center gap-3 text-sm">
+                                <div className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+                                <span className="text-gray-300 flex-1">{task.task}</span>
+                                <span className="text-gray-600 text-xs">{task.hours}h</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs pt-3 border-t border-white/5">
+                            <FiStar className="text-yellow-400" size={11} />
+                            <span className="text-yellow-200/80">Milestone: {week.milestone}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-6 p-5 rounded-xl text-center"
+                  style={{ background: 'linear-gradient(135deg,rgba(16,185,129,0.08),rgba(59,130,246,0.08))', border: '1px solid rgba(16,185,129,0.15)' }}>
+                  <div className="text-emerald-400 text-sm font-bold mb-1">🎯 End Goal</div>
+                  <p className="text-gray-300 text-sm">After completing this plan, your estimated placement probability will increase to <span className="text-white font-black">{targetScore}%</span></p>
+                </div>
+              </div>
+            )}
+
+            {/* ── PDF Download ── */}
+            <div className="glass-card p-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-emerald-500/15">
+                  <FiDownload className="text-emerald-400" size={20} />
+                </div>
+                <div>
+                  <h3 className="text-white font-bold">Download Your Full Plan</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Complete roadmap with weekly schedule + all clickable links as PDF</p>
+                </div>
+              </div>
+              <button
+                onClick={handleDownloadPDF}
+                disabled={isDownloading}
+                className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white transition-all hover:scale-105 active:scale-100 disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{ background: isDownloading ? '#374151' : 'linear-gradient(135deg,#10b981,#059669)', boxShadow: isDownloading ? 'none' : '0 4px 20px rgba(16,185,129,0.3)' }}>
+                {isDownloading ? (
+                  <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Generating...</>
+                ) : (
+                  <><FiDownload size={16} /> Download PDF</>
+                )}
               </button>
             </div>
+
           </div>
         )}
 
