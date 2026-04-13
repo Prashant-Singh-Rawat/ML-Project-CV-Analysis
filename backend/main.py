@@ -9,16 +9,23 @@ from utils.cv_parser import parse_cv_text, extract_text_from_pdf
 from ml_pipeline.model_manager import ModelManager
 from ml_pipeline.synthetic_data import COMPANIES
 
-app = FastAPI(title="CV Analyzer API")
+# Auth
+from auth import user_db as auth_db
+from auth.auth_routes import router as auth_router
+
+app = FastAPI(title="TonyCV API", version="2.0.0")
 
 # Setup CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # For dev purposes
+    allow_origins=["*"],  # For dev — tighten in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include auth router
+app.include_router(auth_router)
 
 # Initialize Model Manager
 model_manager = ModelManager()
@@ -42,6 +49,8 @@ class AnalysisResponse(BaseModel):
 
 @app.on_event("startup")
 async def startup_event():
+    # Initialize auth database
+    auth_db.init_db()
     # Attempt to load or train models on startup
     if not model_manager.load_models():
         print("Models not found. Training on startup...")

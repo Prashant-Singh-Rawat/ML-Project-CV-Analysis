@@ -2,32 +2,75 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import InputForm from './components/InputForm';
 import Dashboard from './components/Dashboard';
-import { FiSearch, FiCpu, FiBarChart2, FiShield, FiZap } from 'react-icons/fi';
+import AuthPage from './components/AuthPage';
+import { FiSearch, FiCpu, FiBarChart2, FiShield, FiZap, FiLogOut, FiUser } from 'react-icons/fi';
 
-const API_BASE_URL = 'https://tonycv-backend.onrender.com';
+const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://localhost:8000'
+  : 'https://tonycv-backend.onrender.com';
+
+// All 11 companies — hardcoded fallback so the select always works
+const FALLBACK_COMPANIES = [
+  "Google", "Amazon", "Microsoft", "Meta", "Apple",
+  "Netflix", "Infosys", "TCS", "Oracle", "IBM", "Adobe"
+];
 
 function App() {
-  const [result, setResult] = useState(null);
+  const [result, setResult]       = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [companies, setCompanies] = useState([]);
-  const [metrics, setMetrics] = useState(null);
-  const [step, setStep] = useState('input');
+  const [error, setError]         = useState(null);
+  const [companies, setCompanies] = useState(FALLBACK_COMPANIES); // pre-load fallback
+  const [metrics, setMetrics]     = useState(null);
+  const [step, setStep]           = useState('input');
   const [searchTerm, setSearchTerm] = useState('');
 
+  // ── Auth state ──────────────────────────────────────────────────────────────
+  const [authUser, setAuthUser] = useState(() => {
+    try {
+      const stored = localStorage.getItem('tonycv_user');
+      return stored ? JSON.parse(stored) : null;
+    } catch { return null; }
+  });
+
+  // Validate stored token on mount
   useEffect(() => {
-    axios.get(`${API_BASE_URL}/companies`)
-      .then(res => setCompanies(res.data.companies))
+    const token = localStorage.getItem('tonycv_token');
+    if (!token) { setAuthUser(null); return; }
+
+    axios.get(`${API_BASE_URL}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => setAuthUser(res.data))
       .catch(() => {
-        setCompanies(["Google", "Amazon", "Microsoft", "Meta", "Apple"]);
+        // Token expired or invalid — clear and re-show login
+        localStorage.removeItem('tonycv_token');
+        localStorage.removeItem('tonycv_user');
+        setAuthUser(null);
+      });
+  }, []);
+
+  // ── Fetch companies & metrics when logged in ─────────────────────────────────
+  useEffect(() => {
+    if (!authUser) return;
+
+    axios.get(`${API_BASE_URL}/companies`)
+      .then(res => {
+        if (res.data.companies && res.data.companies.length > 0) {
+          setCompanies(res.data.companies);
+        }
+        // else keep FALLBACK_COMPANIES already set
+      })
+      .catch(() => {
+        // API unreachable — FALLBACK_COMPANIES stays
+        console.warn('Could not fetch companies from API, using fallback list.');
       });
 
     axios.get(`${API_BASE_URL}/metrics`)
       .then(res => setMetrics(res.data))
-      .catch(err => console.error("Error fetching metrics", err));
-  }, []);
+      .catch(err => console.error('Error fetching metrics', err));
+  }, [authUser]);
 
-  // Magic Search — type a URL to open it
+  // ── Magic Search ─────────────────────────────────────────────────────────────
   const handleSearchKeyDown = (e) => {
     if (e.key === 'Enter' && searchTerm.trim()) {
       let url = searchTerm.trim();
@@ -39,6 +82,7 @@ function App() {
     }
   };
 
+  // ── Analyze ──────────────────────────────────────────────────────────────────
   const handleAnalyze = async (data) => {
     setIsLoading(true);
     setError(null);
@@ -48,13 +92,17 @@ function App() {
       formData.append('cgpa', data.cgpa);
       formData.append('target_company', data.target_company);
 
+      const token = localStorage.getItem('tonycv_token');
       const response = await axios.post(`${API_BASE_URL}/analyze`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
       });
       setResult(response.data);
       setStep('result');
     } catch (err) {
-      setError(err.response?.data?.detail || "An error occurred while connecting to the AI model.");
+      setError(err.response?.data?.detail || 'An error occurred while connecting to the AI model.');
     } finally {
       setIsLoading(false);
     }
@@ -66,13 +114,26 @@ function App() {
     setError(null);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('tonycv_token');
+    localStorage.removeItem('tonycv_user');
+    setAuthUser(null);
+    resetToInput();
+  };
+
   const features = [
-    { icon: <FiCpu />, title: 'NLP Analysis', desc: 'Deep language understanding' },
-    { icon: <FiBarChart2 />, title: 'ML Predictions', desc: 'RandomForest powered' },
-    { icon: <FiShield />, title: 'Skill Match', desc: 'Industry-aligned scoring' },
-    { icon: <FiZap />, title: 'Instant Results', desc: 'Real-time processing' },
+    { icon: <FiCpu />,      title: 'NLP Analysis',    desc: 'Deep language understanding' },
+    { icon: <FiBarChart2 />, title: 'ML Predictions',  desc: 'RandomForest powered' },
+    { icon: <FiShield />,   title: 'Skill Match',     desc: 'Industry-aligned scoring' },
+    { icon: <FiZap />,      title: 'Instant Results', desc: 'Real-time processing' },
   ];
 
+  // ── Auth gate ─────────────────────────────────────────────────────────────────
+  if (!authUser) {
+    return <AuthPage onAuthSuccess={(user) => setAuthUser(user)} />;
+  }
+
+  // ── Main App ──────────────────────────────────────────────────────────────────
   return (
     <>
       {/* Animated Background */}
@@ -103,8 +164,23 @@ function App() {
             />
           </div>
 
+          {/* User Info + Logout */}
           <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-500 hidden sm:block">AI-Powered Engine v2.0</span>
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg"
+              style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)' }}>
+              <FiUser size={13} style={{ color: '#a78bfa' }} />
+              <span className="text-xs font-semibold" style={{ color: '#a78bfa' }}>
+                {authUser.name}
+              </span>
+            </div>
+            <button
+              onClick={handleLogout}
+              title="Sign out"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-red-400 transition-all"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+            >
+              <FiLogOut size={13} /> Logout
+            </button>
           </div>
         </div>
       </nav>
@@ -115,7 +191,8 @@ function App() {
 
           {/* Hero Section */}
           <div className="text-center mb-12 animate-fade-in-up">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold mb-6 tracking-wide uppercase" style={{ background: 'rgba(139, 92, 246, 0.12)', color: '#a78bfa', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold mb-6 tracking-wide uppercase"
+              style={{ background: 'rgba(139, 92, 246, 0.12)', color: '#a78bfa', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
               <FiZap size={12} /> AI-Powered Analysis Engine
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight mb-5 leading-tight">
@@ -124,8 +201,8 @@ function App() {
             </h1>
             <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed">
               {step === 'input'
-                ? "Upload your resume, enter your CGPA, and select your dream company. Our NLP pipeline will analyze your profile and predict your placement probability."
-                : "Your AI-generated placement analysis and skill gap report is ready."
+                ? 'Upload your resume, enter your CGPA, and select your dream company. Our NLP pipeline will analyze your profile and predict your placement probability.'
+                : 'Your AI-generated placement analysis and skill gap report is ready.'
               }
             </p>
           </div>
@@ -135,9 +212,7 @@ function App() {
             <div className="flex flex-wrap justify-center gap-4 mb-10 animate-fade-in-up delay-200" style={{ opacity: 0 }}>
               {features.map((f, i) => (
                 <div key={i} className="flex items-center gap-3 glass-card px-5 py-3">
-                  <div className="feature-icon text-violet-400">
-                    {f.icon}
-                  </div>
+                  <div className="feature-icon text-violet-400">{f.icon}</div>
                   <div>
                     <div className="text-sm font-semibold text-white">{f.title}</div>
                     <div className="text-xs text-gray-500">{f.desc}</div>
@@ -150,7 +225,8 @@ function App() {
           {/* Error Alert */}
           {error && (
             <div className="animate-slide-down mb-6 max-w-2xl mx-auto">
-              <div className="flex items-center gap-3 px-5 py-4 rounded-xl" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+              <div className="flex items-center gap-3 px-5 py-4 rounded-xl"
+                style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
                 <div className="text-red-400 text-lg">⚠</div>
                 <p className="text-red-300 text-sm font-medium">{error}</p>
               </div>
