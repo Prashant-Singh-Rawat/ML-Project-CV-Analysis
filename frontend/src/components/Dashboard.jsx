@@ -628,10 +628,16 @@ const Dashboard = ({ result, metrics, onBack }) => {
                 <div className="space-y-3">
                   {github_analysis?.map((a, i) => (
                     <div key={i} className="p-3 rounded-lg border border-white/5 bg-white/5 flex gap-3">
-                       <FiAlertTriangle className={a.severity === 'High' ? 'text-red-400' : 'text-yellow-400'} />
+                       {a.severity === 'High' ? (
+                         <FiAlertTriangle className="text-red-400 shrink-0" size={16} />
+                       ) : a.severity === 'Medium' ? (
+                         <FiAlertTriangle className="text-yellow-400 shrink-0" size={16} />
+                       ) : (
+                         <FiCheckCircle className="text-blue-400 shrink-0" size={16} />
+                       )}
                        <div>
                          <p className="text-xs font-bold text-white">{a.issue}</p>
-                         <p className="text-[10px] text-gray-500">{a.detail}</p>
+                         <p className="text-[10px] text-gray-400 mt-0.5">{a.detail}</p>
                        </div>
                     </div>
                   ))}

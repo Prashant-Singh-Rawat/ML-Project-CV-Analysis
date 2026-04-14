@@ -5,14 +5,22 @@ import io
 from typing import List, Dict
 import re
 
+import sys
+
 # Load small english model. If not installed, you can use fallbacks or install it.
 try:
     nlp = spacy.load("en_core_web_sm")
 except OSError:
     # If not found, download it or fallback to basic parsing
     import subprocess
-    subprocess.run(["python", "-m", "spacy", "download", "en_core_web_sm"])
-    nlp = spacy.load("en_core_web_sm")
+    print("Downloading spaCy model 'en_core_web_sm'...")
+    subprocess.run([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
+    try:
+        nlp = spacy.load("en_core_web_sm")
+    except OSError:
+        # Final fallback to a blank model if all else fails
+        print("Failed to download model. Falling back to blank English model.")
+        nlp = spacy.blank("en")
 
 from ml_pipeline.synthetic_data import SKILLS_DB
 
@@ -84,8 +92,10 @@ def parse_cv_text(text: str) -> Dict[str, any]:
     return {
         "skills": skills,
         "organizations": entities["ORG"],
+        "persons": entities["PERSON"],
         "locations": entities["GPE"],
-        "word_count": word_count
+        "word_count": word_count,
+        "raw_text": text
     }
 
 if __name__ == "__main__":
