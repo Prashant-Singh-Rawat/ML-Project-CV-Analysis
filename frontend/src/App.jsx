@@ -5,9 +5,8 @@ import Dashboard from './components/Dashboard';
 import AuthPage from './components/AuthPage';
 import { FiSearch, FiCpu, FiBarChart2, FiShield, FiZap, FiLogOut, FiUser } from 'react-icons/fi';
 
-const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ? 'http://localhost:8000'
-  : 'https://tonycv-backend.onrender.com';
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.startsWith('192.168.') || window.location.hostname.startsWith('172.') || window.location.hostname.startsWith('10.');
+const API_BASE_URL = isLocal ? `http://${window.location.hostname}:8000` : 'https://tonycv-backend.onrender.com';
 
 // All 11 companies — hardcoded fallback so the select always works
 const FALLBACK_COMPANIES = [
@@ -49,26 +48,24 @@ function App() {
       });
   }, []);
 
-  // ── Fetch companies & metrics when logged in ─────────────────────────────────
+  // ── Fetch companies & metrics on mount ─────────────────────────────────
   useEffect(() => {
-    if (!authUser) return;
-
     axios.get(`${API_BASE_URL}/companies`)
       .then(res => {
         if (res.data.companies && res.data.companies.length > 0) {
           setCompanies(res.data.companies);
         }
-        // else keep FALLBACK_COMPANIES already set
       })
       .catch(() => {
-        // API unreachable — FALLBACK_COMPANIES stays
         console.warn('Could not fetch companies from API, using fallback list.');
       });
 
     axios.get(`${API_BASE_URL}/metrics`)
-      .then(res => setMetrics(res.data))
+      .then(res => {
+        if (res.data) setMetrics(res.data);
+      })
       .catch(err => console.error('Error fetching metrics', err));
-  }, [authUser]);
+  }, []);
 
   // ── Magic Search ─────────────────────────────────────────────────────────────
   const handleSearchKeyDown = (e) => {
@@ -94,6 +91,7 @@ function App() {
       if (data.github_url) {
         formData.append('github_url', data.github_url);
       }
+      formData.append('experience_level', data.experience_level || 'fresher');
 
       const token = localStorage.getItem('tonycv_token');
       const response = await axios.post(`${API_BASE_URL}/analyze`, formData, {

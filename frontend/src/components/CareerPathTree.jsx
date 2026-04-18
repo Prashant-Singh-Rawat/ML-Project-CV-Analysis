@@ -122,9 +122,9 @@ const CareerPathTree = ({ matchedSkills }) => {
       )}
 
       {/* Career Path Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {careerMatches.map((career, i) => (
-          <div key={i} className="rounded-xl overflow-hidden transition-all" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div key={i} className={`rounded-2xl transition-all duration-300 h-full ${expandedPath === career.title ? 'ring-2 ring-white/10 bg-white/5' : 'bg-white/[0.03]'}`} style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
             {/* Card Header */}
             <button
               className="w-full p-4 flex items-center gap-3 text-left hover:bg-white/5 transition-all"
@@ -153,8 +153,12 @@ const CareerPathTree = ({ matchedSkills }) => {
 
             {/* Match Progress Bar */}
             <div className="px-4 pb-2">
-              <div className="h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${career.matchPct}%`, background: career.color }} />
+              <div className="h-1.5 rounded-full overflow-hidden bg-white/5">
+                <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ 
+                  width: `${career.matchPct}%`, 
+                  background: `linear-gradient(90deg, ${career.color}aa, ${career.color})`,
+                  boxShadow: `0 0 10px ${career.color}40`
+                }} />
               </div>
             </div>
 

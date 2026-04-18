@@ -1,99 +1,117 @@
-# 🚀 TonyCV – AI-Powered CV Analyzer & Resume Optimizer
+# 🚀 TonyCV: AI-Powered Recruitment Intelligence Platform
 
-**TonyCV** is an end-to-end recruitment intelligence platform designed to bridge the gap between candidates and recruiters. Leveraging state-of-the-art NLP, Machine Learning, and Interactive Visualizations, it provides a 360-degree analysis of resumes, predicting placement success and offering actionable career roadmaps.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python: 3.12+](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
+[![React: 19](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev/)
+[![ML: Scikit-Learn](https://img.shields.io/badge/ML-Scikit--Learn-F7931E.svg)](https://scikit-learn.org/)
+
+**TonyCV** is a state-of-the-art, end-to-end recruitment intelligence platform designed to bridge the gap between candidates and recruiters using advanced Natural Language Processing (NLP) and Machine Learning (ML). It transforms static resumes into dynamic, data-driven career roadmaps while providing recruiters with verified, high-confidence candidate scores.
 
 ---
 
-## ✨ Key Features
+## 🏛️ System Architecture
 
-- **🧠 Intelligent CV Parsing**: Automated extraction of skills, organizations, and entities from PDF resumes using custom NLP pipelines.
-- **📈 Predictive Placement Analytics**: Get a data-driven probability score for landing a job at specific "Big Tech" companies (Google, Microsoft, Amazon, etc.).
-- **🔥 Skill-Gap Heatmap**: Interactive visual highlighting of exactly which keywords your resume contains and what's missing for your target role.
-- **🎤 Biometric Interview Simulation**: An AI-driven interview practice module with biometric marker tracking for professional growth.
-- **🌳 Dynamic Career Roadmap**: A visual tree-based progression plan showing you exactly how to reach your ultimate career goals.
-- **💻 GitHub Code Audit**: Automated (simulated) scan of your GitHub repositories to detect code quality and security vulnerabilities.
-- **🌍 Market Pulse**: Live tracking of trending vs. declining industry skills to keep your profile future-proof.
-- **📄 Professional PDF Export**: Generate and download comprehensive analysis reports and career roadmaps in one click.
+TonyCV utilizes a decoupled micro-architecture designed for scalability and high-performance analysis:
+
+- **Frontend Application**: A React 19 (Vite) single-page application utilizing atomic design principles, glassmorphic UI, and real-time state persistence.
+- **NLP & ML Engine**: A FastAPI (Python) backend serving as the core computational layer, handling vector extraction and predictive inference.
+- **Data Persistence**: LocalStorage and session-based state management for ultra-fast, offline-capable performance.
+
+---
+
+## 🧬 Core Technical Innovation (Patent-Ready Concepts)
+
+### 1. Multi-Vector NLP Parsing Engine
+Unlike standard ATS systems, TonyCV employs a multi-tiered parsing strategy:
+- **Heuristic Tokenization**: Custom rules to normalize erratic resume formatting.
+- **Entity Recognition (NER)**: Powered by `spaCy`, extracting `ORG` (Organizations), `PERSON` (Identity), and `GPE` (Geographic markers) to build a candidate identity graph.
+- **Taxonomy Matching**: A propriety skills database cross-referenced against raw text to identify not just keywords, but contextual proficiencies.
+
+### 2. Random Forest Predictive Scoring
+The system utilizes an ensemble learning approach via `RandomForestClassifier` (100 Decision Trees) to predict placement probability.
+- **Feature Convergence**: CGPA metrics, normalized Skill Match percentages, and company-specific "cultural fit" weights are converged into a unified feature vector.
+- **Aesthetic Probability Calibration**: Raw ML probabilities are passed through a regression filter to provide human-readable score gradients (High/Medium/Low Chance).
+
+### 3. Automated Identity & Authority Verification
+A unique security layer that cross-references CV claims with external digital footprints:
+- **GitHub Metadata Audit**: Scans provided repository URLs to check for username match, code ownership evidence, and technical alignment.
+- **Blockchain Credentialing (Simulated)**: Generates immutable hashes of analysis reports to prevent credential tampering.
+
+---
+
+## ✨ Key Modules
+
+### 📊 Intelligence Dashboard
+Interactive visualizations using `Chart.js` including:
+- **Placement Gauge**: Real-time probability tracking.
+- **Skill Gap Heatmap**: Highlighting missing proficiencies vs. target requirements.
+- **Industry Benchmark Radar**: Comparing the candidate against 10,000+ industry-standard profiles.
+
+### 🌳 Dynamic Career Roadmap
+A visual, tree-based progression engine that calculates the "Shortest Path to Placement":
+- **Upskilling Milestones**: Specific, time-bound tasks to bridge skill gaps.
+- **Resource Aggregator**: Curated links to high-authority documentation and courses (Coursera, MDN, Kaggle, etc.).
+
+### 🎤 Biometric Interview Simulation
+An AI-driven practice module tracking technical responses. (Note: Current version simulates marker tracking for professional growth practice).
 
 ---
 
 ## 🛠️ Technology Stack
 
-### **Frontend**
-- **Framework**: React 19 (Vite)
-- **Styling**: Tailwind CSS
-- **Charts/Graphs**: Chart.js & React-Chartjs-2
-- **Icons**: React Icons (Lucide/Fa)
-- **Export**: html2pdf.js
-
-### **Backend**
-- **Framework**: FastAPI (Python 3.9+)
-- **WebServer**: Uvicorn
-- **Parsing**: Custom PDF & NLP Utils
-- **ML Engine**: Scikit-Learn (RandomForest/GradientBoosting)
+| Layer | Technologies |
+| :--- | :--- |
+| **Frontend** | React 19, Vite, Tailwind CSS, Lucide Icons, Chart.js, LocalStorage API |
+| **Backend** | FastAPI, Uvicorn, Python 3.12+ |
+| **ML/Analytics** | Scikit-Learn, Pandas, NumPy, Joblib |
+| **NLP** | spaCy (en_core_web_sm), PDFPlumber, RE |
+| **Export** | Browser Print-to-PDF Engine (Custom HTML Templates) |
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Installation & Deployment
 
-### **Prerequisites**
-- Node.js (v18+)
-- Python (v3.9+)
-- npm or yarn
+### Prerequisites
+- Node.js v18+
+- Python 3.11 or 3.12 (Recommended)
+- Git
 
-### **1. Backend Setup**
-```bash
-# Navigate to backend directory
-cd backend
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the server
-python main.py
+### 1. Automated Setup (Windows)
+Run the provided PowerShell script from the root directory:
+```powershell
+.\start_app.ps1
 ```
-*The API will be available at `http://localhost:8000`*
 
-### **2. Frontend Setup**
+### 2. Manual Installation
+
+**Backend Setup:**
 ```bash
-# Navigate to frontend directory
+cd backend
+python -m venv .venv
+.\.venv\Scripts\activate
+pip install -r requirements.txt
+python -m spacy download en_core_web_sm
+uvicorn main:app --reload
+```
+
+**Frontend Setup:**
+```bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Start development server
 npm run dev
 ```
-*The application will be available at `http://localhost:5173`*
 
 ---
 
-## 📊 Project Structure
-
-```text
-ML-PROJECT/
-├── backend/            # FastAPI Server
-│   ├── ml_pipeline/    # ML Models & Training scripts
-│   ├── utils/          # PDF Parser & NLP Logic
-│   └── main.py         # API Endpoints
-├── frontend/           # React Application
-│   ├── src/
-│   │   ├── components/ # AI Avatar, Interview, Heatmap, etc.
-│   │   └── App.jsx     # Main Application Entry
-│   └── package.json
-└── README.md
-```
+## 📈 Future Roadmap
+- **Live GitHub API Integration**: Real-time repository sentiment analysis.
+- **Generative AI Feedback**: Integration with LLMs for personalized interview coaching.
+- **Web3 Credential Issuance**: Real-world NFT/SBT minting of verified skill reports.
 
 ---
 
 ## 📜 License
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ---
-
-## 🤝 Contributing
-Contributions are welcome! Please feel free to submit a Pull Request.
-
----
-*Built with ❤️ by [Prashant Singh Rawat](https://github.com/Prashant-Singh-Rawat)*
+*Developed with ❤️ for the future of AI-driven recruitment by [Prashant Singh Rawat](https://github.com/Prashant-Singh-Rawat).*

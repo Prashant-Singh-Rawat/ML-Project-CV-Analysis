@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FiUploadCloud, FiBriefcase, FiAward, FiArrowRight, FiMic, FiMicOff, FiX, FiChevronDown, FiCheck, FiSearch } from 'react-icons/fi';
+import { FiUploadCloud, FiBriefcase, FiAward, FiArrowRight, FiMic, FiMicOff, FiX, FiChevronDown, FiCheck, FiSearch, FiUser, FiUsers, FiStar } from 'react-icons/fi';
 
 // ── Company logo color map ────────────────────────────────────────────────────
 const COMPANY_META = {
@@ -184,6 +184,7 @@ const InputForm = ({ onAnalyze, isLoading, companies }) => {
   const [cgpa, setCgpa]                 = useState('');
   const [targetCompany, setTargetCompany] = useState('');
   const [githubUrl, setGithubUrl]       = useState('');
+  const [experienceLevel, setExperienceLevel] = useState('fresher');
   const [dragOver, setDragOver]         = useState(false);
 
   // Voice Input State
@@ -262,7 +263,7 @@ const InputForm = ({ onAnalyze, isLoading, companies }) => {
       alert("Please fill in ALL mandatory fields including Resume, CGPA, Target Company, and GitHub Profile.");
       return;
     }
-    onAnalyze({ cv_file: cvFile, cgpa: parseFloat(cgpa), target_company: targetCompany, github_url: githubUrl });
+    onAnalyze({ cv_file: cvFile, cgpa: parseFloat(cgpa), target_company: targetCompany, github_url: githubUrl, experience_level: experienceLevel });
   };
 
   const handleDrop = (e) => {
@@ -424,6 +425,45 @@ const InputForm = ({ onAnalyze, isLoading, companies }) => {
               <p className="text-gray-600 text-xs mt-1.5">{companyList.length} companies available</p>
             )}
           </div>
+        </div>
+
+        {/* Experience Level Selector */}
+        <div>
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-400 mb-3">
+            <FiUsers size={14} /> Experience Level
+          </label>
+          <div className="grid grid-cols-3 gap-2 p-1.5 rounded-xl" style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            {[
+              { id: 'fresher', label: 'Fresher', icon: <FiUser size={16} />, sub: '0-1 years', color: '#10b981' },
+              { id: 'experienced', label: 'Experienced', icon: <FiUsers size={16} />, sub: '2-5 years', color: '#f59e0b' },
+              { id: 'highly_experienced', label: 'Highly Exp.', icon: <FiStar size={16} />, sub: '5+ years', color: '#8b5cf6' },
+            ].map(exp => (
+              <button
+                key={exp.id}
+                type="button"
+                id={`experience-${exp.id}`}
+                onClick={() => setExperienceLevel(exp.id)}
+                className={`relative flex flex-col items-center gap-1.5 px-3 py-3 rounded-lg transition-all duration-300 ${experienceLevel === exp.id ? 'text-white' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}`}
+                style={experienceLevel === exp.id ? {
+                  background: `linear-gradient(135deg, ${exp.color}25, ${exp.color}10)`,
+                  border: `1px solid ${exp.color}50`,
+                  boxShadow: `0 0 20px ${exp.color}15`,
+                } : { border: '1px solid transparent' }}
+              >
+                <div className="transition-all" style={{ color: experienceLevel === exp.id ? exp.color : 'inherit' }}>
+                  {exp.icon}
+                </div>
+                <span className={`text-xs font-bold ${experienceLevel === exp.id ? 'text-white' : ''}`}>{exp.label}</span>
+                <span className="text-[10px]" style={{ color: experienceLevel === exp.id ? exp.color : '#6b7280' }}>{exp.sub}</span>
+                {experienceLevel === exp.id && (
+                  <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center" style={{ background: exp.color }}>
+                    <FiCheck size={10} className="text-white" />
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+          <p className="text-gray-600 text-xs mt-1.5">Hiring analysis will be categorized based on your experience</p>
         </div>
 
         {/* GitHub URL */}

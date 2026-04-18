@@ -23,7 +23,8 @@ import {
   FiTarget, FiZap, FiSettings, FiArrowLeft, FiDownload,
   FiTrendingDown, FiAward, FiClock, FiCalendar, FiStar,
   FiX, FiCpu, FiDatabase, FiLayers, FiUsers, FiRefreshCw,
-  FiCamera, FiShield, FiGithub, FiActivity, FiGlobe, FiLink
+  FiCamera, FiShield, FiGithub, FiActivity, FiGlobe, FiLink,
+  FiBriefcase, FiTrendingUp, FiChevronDown, FiChevronUp
 } from 'react-icons/fi';
 
 ChartJS.register(ArcElement, Tooltip, Legend, RadialLinearScale, PointElement, LineElement, Filler, CategoryScale, LinearScale, BarElement);
@@ -385,7 +386,9 @@ const Dashboard = ({ result, metrics, onBack }) => {
     matched_skills,
     missing_skills,
     github_analysis,
-    market_pulse_adjustments
+    market_pulse_adjustments,
+    hiring_analysis,
+    experience_level
   } = result;
 
   const statusColor = placement_probability > 75 ? '#10b981' : placement_probability > 45 ? '#f59e0b' : '#ef4444';
@@ -506,6 +509,7 @@ const Dashboard = ({ result, metrics, onBack }) => {
       <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-white/5 border border-white/10">
         {[
           { id: 'overview', icon: <FiBarChart2 />, label: 'Overview' },
+          { id: 'hiring', icon: <FiBriefcase />, label: 'Hiring Analysis' },
           { id: 'verification', icon: <FiShield />, label: 'Verification' },
           { id: 'learning', icon: <FiBookOpen />, label: 'Learning' },
           { id: 'evaluation', icon: <FiZap />, label: 'Evaluation' },
@@ -926,9 +930,103 @@ const Dashboard = ({ result, metrics, onBack }) => {
               <h3 className="text-lg font-bold text-white mb-6">CV Keyword Heatmap</h3>
               <ResumeHeatmap cvText={result.cv_text} matchedSkills={matched_skills} missingSkills={missing_skills} />
             </div>
-            <div className="glass-card p-8 h-[500px]">
+            <div className="glass-card p-8 min-h-[500px] h-auto">
               <h3 className="text-lg font-bold text-white mb-6">Career Path Network</h3>
               <CareerPathTree matchedSkills={matched_skills} />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'hiring' && hiring_analysis && (
+          <div className="lg:col-span-2 space-y-6 animate-fade-in-up">
+            <div className="glass-card p-8 bg-gradient-to-br from-violet-900/40 to-blue-900/20 border-violet-500/30">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 rounded-xl bg-violet-500/20 text-violet-400">
+                  <FiBriefcase size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Hiring Analysis</h3>
+                  <p className="text-sm text-gray-400 mt-1">Based on category: <span className="text-emerald-400 font-semibold">{hiring_analysis.experience_category}</span></p>
+                </div>
+              </div>
+
+              <div className="bg-white/5 border border-white/10 rounded-xl p-6 mb-8 flex flex-col md:flex-row items-center gap-6 justify-between">
+                 <div>
+                    <h4 className="text-gray-400 text-sm mb-1 uppercase tracking-wider font-bold">Best Fit Role</h4>
+                    <div className="text-3xl font-black text-white bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
+                      {hiring_analysis.best_fit_role}
+                    </div>
+                 </div>
+                 <div className="text-right">
+                    <div className="text-5xl font-black text-emerald-400">{hiring_analysis.best_fit_chance}%</div>
+                    <div className="text-xs text-gray-500 uppercase tracking-widest font-bold mt-1">Match Probability</div>
+                 </div>
+              </div>
+
+              <h4 className="text-white font-bold mb-4">Job Role Alignment Details</h4>
+              <div className="space-y-4">
+                {hiring_analysis.job_analysis.map((job, idx) => (
+                  <div key={idx} className="bg-black/40 border border-white/10 rounded-xl p-5 hover:bg-white/5 transition-colors">
+                    <div className="flex flex-col md:flex-row justify-between mb-4 gap-4">
+                       <div className="flex-1">
+                         <div className="flex items-center gap-3 mb-2">
+                           <h5 className="text-lg font-bold text-white">{job.role}</h5>
+                           <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider
+                             ${job.recommendation === 'Highly Recommended' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 
+                               job.recommendation === 'Good Fit' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                               job.recommendation === 'Moderate Fit' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
+                               'bg-red-500/20 text-red-400 border border-red-500/30'
+                             }`}
+                           >
+                             {job.recommendation}
+                           </span>
+                         </div>
+                         <div className="flex gap-4 text-xs text-gray-400">
+                           <div className="flex items-center gap-1.5"><FiTarget className="text-violet-400"/> Skill Match: {job.skill_match}%</div>
+                           <div className="flex items-center gap-1.5"><FiUsers className="text-orange-400"/> Experience Fit: {job.experience_fit}%</div>
+                         </div>
+                       </div>
+                       
+                       <div className="w-full md:w-48 text-right">
+                         <div className="flex justify-between items-end mb-1 text-xs">
+                           <span className="text-gray-500 uppercase tracking-wider font-bold">Hiring Chance</span>
+                           <span className="text-xl font-black" style={{ color: job.hiring_chance > 70 ? '#10b981' : job.hiring_chance > 40 ? '#f59e0b' : '#ef4444' }}>
+                             {job.hiring_chance}%
+                           </span>
+                         </div>
+                         <div className="h-2.5 bg-white/5 rounded-full overflow-hidden w-full">
+                           <div className="h-full rounded-full transition-all duration-1000" 
+                                style={{ 
+                                  width: `${job.hiring_chance}%`, 
+                                  background: job.hiring_chance > 70 ? '#10b981' : job.hiring_chance > 40 ? '#f59e0b' : '#ef4444' 
+                                }} 
+                           />
+                         </div>
+                       </div>
+                    </div>
+                    
+                    <div className="pt-3 border-t border-white/5 flex flex-wrap gap-x-6 gap-y-2 text-xs">
+                      {job.matched_skills.length > 0 && (
+                        <div>
+                          <strong className="text-emerald-400 mb-1 block">Matched Skills</strong>
+                          <div className="flex flex-wrap gap-1.5">
+                            {job.matched_skills.map(s => <span key={s} className="px-2 py-1 bg-emerald-500/10 text-emerald-300 rounded border border-emerald-500/20">{s}</span>)}
+                          </div>
+                        </div>
+                      )}
+                      {job.missing_skills.length > 0 && (
+                        <div>
+                           <strong className="text-red-400 flex items-center gap-1 mb-1"><FiTrendingUp size={12}/> Needs Improvement</strong>
+                           <div className="flex flex-wrap gap-1.5">
+                            {job.missing_skills.slice(0, 5).map(s => <span key={s} className="px-2 py-1 bg-white/5 text-gray-400 rounded border border-white/10">{s}</span>)}
+                            {job.missing_skills.length > 5 && <span className="text-gray-500 self-center">+{job.missing_skills.length - 5} more</span>}
+                           </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}

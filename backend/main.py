@@ -34,6 +34,120 @@ class AnalysisRequest(BaseModel):
     cv_text: str
     cgpa: float
     target_company: str
+    experience_level: str = "fresher"
+
+# Job categories with required skills and experience weights
+JOB_CATEGORIES = {
+    "Software Engineer": {
+        "skills": ["Python", "Java", "C++", "JavaScript", "SQL", "Git", "Data Structures"],
+        "weights": {"fresher": 0.85, "experienced": 1.0, "highly_experienced": 0.95},
+        "min_cgpa": 7.0
+    },
+    "Data Scientist": {
+        "skills": ["Python", "Machine Learning", "Data Analysis", "SQL", "Pandas", "NumPy", "TensorFlow"],
+        "weights": {"fresher": 0.6, "experienced": 0.9, "highly_experienced": 1.0},
+        "min_cgpa": 7.5
+    },
+    "ML Engineer": {
+        "skills": ["Python", "Machine Learning", "Deep Learning", "TensorFlow", "PyTorch", "Docker", "AWS"],
+        "weights": {"fresher": 0.5, "experienced": 0.85, "highly_experienced": 1.0},
+        "min_cgpa": 8.0
+    },
+    "Frontend Developer": {
+        "skills": ["JavaScript", "React", "TypeScript", "HTML", "CSS", "Vue.js", "Angular"],
+        "weights": {"fresher": 0.9, "experienced": 1.0, "highly_experienced": 0.9},
+        "min_cgpa": 6.5
+    },
+    "Backend Developer": {
+        "skills": ["Python", "Java", "Node.js", "SQL", "PostgreSQL", "Docker", "AWS"],
+        "weights": {"fresher": 0.75, "experienced": 1.0, "highly_experienced": 0.95},
+        "min_cgpa": 7.0
+    },
+    "DevOps Engineer": {
+        "skills": ["Docker", "Kubernetes", "AWS", "Terraform", "Jenkins", "Git", "Python"],
+        "weights": {"fresher": 0.4, "experienced": 0.85, "highly_experienced": 1.0},
+        "min_cgpa": 7.0
+    },
+    "Cloud Architect": {
+        "skills": ["AWS", "Azure", "GCP", "Docker", "Kubernetes", "Terraform", "Python"],
+        "weights": {"fresher": 0.3, "experienced": 0.7, "highly_experienced": 1.0},
+        "min_cgpa": 7.5
+    },
+    "Full Stack Developer": {
+        "skills": ["JavaScript", "React", "Node.js", "Python", "SQL", "Git", "Docker"],
+        "weights": {"fresher": 0.8, "experienced": 1.0, "highly_experienced": 0.9},
+        "min_cgpa": 6.5
+    },
+}
+
+def compute_hiring_analysis(candidate_skills, cgpa, experience_level):
+    """Compute hiring chance percentages for different job categories."""
+    import random
+    results = []
+    exp_key = experience_level.lower().replace(" ", "_")
+    if exp_key not in ["fresher", "experienced", "highly_experienced"]:
+        exp_key = "fresher"
+    
+    for role, config in JOB_CATEGORIES.items():
+        req_skills = config["skills"]
+        matched = set(s.lower() for s in candidate_skills).intersection(set(s.lower() for s in req_skills))
+        skill_match = (len(matched) / len(req_skills)) * 100 if req_skills else 50
+        
+        # Experience weight
+        exp_weight = config["weights"].get(exp_key, 0.5)
+        
+        # CGPA factor
+        cgpa_factor = min(1.0, cgpa / config["min_cgpa"]) if config["min_cgpa"] > 0 else 1.0
+        
+        # Composite hiring chance
+        base_chance = (skill_match * 0.5) + (cgpa_factor * 100 * 0.2) + (exp_weight * 100 * 0.3)
+        
+        # Add slight noise for realism
+        noise = random.uniform(-3, 3)
+        hiring_chance = max(5, min(98, base_chance + noise))
+        
+        # Determine recommendation level
+        if hiring_chance >= 75:
+            recommendation = "Highly Recommended"
+        elif hiring_chance >= 50:
+            recommendation = "Good Fit"
+        elif hiring_chance >= 30:
+            recommendation = "Moderate Fit"
+        else:
+            recommendation = "Needs Improvement"
+        
+        matched_display = [s for s in req_skills if s.lower() in set(sk.lower() for sk in candidate_skills)]
+        missing_display = [s for s in req_skills if s.lower() not in set(sk.lower() for sk in candidate_skills)]
+        
+        results.append({
+            "role": role,
+            "hiring_chance": round(hiring_chance, 1),
+            "skill_match": round(skill_match, 1),
+            "experience_fit": round(exp_weight * 100, 1),
+            "recommendation": recommendation,
+            "matched_skills": matched_display,
+            "missing_skills": missing_display
+        })
+    
+    # Sort by hiring chance descending
+    results.sort(key=lambda x: x["hiring_chance"], reverse=True)
+    
+    # Determine best fit category
+    best_fit = results[0] if results else None
+    
+    # Experience category label
+    exp_labels = {
+        "fresher": "Fresher (0-1 years)",
+        "experienced": "Experienced (2-5 years)",
+        "highly_experienced": "Highly Experienced (5+ years)"
+    }
+    
+    return {
+        "experience_category": exp_labels.get(exp_key, "Fresher (0-1 years)"),
+        "best_fit_role": best_fit["role"] if best_fit else "Unknown",
+        "best_fit_chance": best_fit["hiring_chance"] if best_fit else 0,
+        "job_analysis": results
+    }
 
 class AnalysisResponse(BaseModel):
     placement_probability: float
@@ -46,6 +160,8 @@ class AnalysisResponse(BaseModel):
     keyword_highlights: List[dict]
     github_analysis: Optional[List[dict]] = None
     market_pulse_adjustments: Optional[dict] = None
+    hiring_analysis: Optional[dict] = None
+    experience_level: Optional[str] = None
 
 @app.on_event("startup")
 async def startup_event():
@@ -85,7 +201,8 @@ async def analyze_cv(
     cv_file: UploadFile = File(...),
     cgpa: float = Form(...),
     target_company: str = Form(...),
-    github_url: Optional[str] = Form("")
+    github_url: Optional[str] = Form(""),
+    experience_level: Optional[str] = Form("fresher")
 ):
     # 1. Read and Parse the CV PDF
     if not cv_file.filename.endswith('.pdf'):
@@ -200,7 +317,14 @@ async def analyze_cv(
         "trending_matched": random.choice(prediction['matched_skills']) if prediction['matched_skills'] else "None"
     }
     
-    # 7. Construct Response
+    # 7. Hiring Analysis based on experience level
+    hiring_analysis = compute_hiring_analysis(
+        candidate_skills=candidate_skills,
+        cgpa=cgpa,
+        experience_level=experience_level or "fresher"
+    )
+    
+    # 8. Construct Response
     return AnalysisResponse(
         placement_probability=prediction['placement_probability'],
         placement_status=prediction['placement_status'],
@@ -214,7 +338,9 @@ async def analyze_cv(
         cv_text=cv_text,
         keyword_highlights=keyword_highlights,
         github_analysis=github_analysis,
-        market_pulse_adjustments=market_pulse
+        market_pulse_adjustments=market_pulse,
+        hiring_analysis=hiring_analysis,
+        experience_level=experience_level or "fresher"
     )
 
 
