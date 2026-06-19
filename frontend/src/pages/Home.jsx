@@ -338,6 +338,10 @@ export default function Home() {
   // FAQ Accordion State
   const [openFaq, setOpenFaq] = useState(null);
   const [activeTemplate, setActiveTemplate] = useState('Cascade');
+  // Wizard / Builder Console State
+  const [showWizard, setShowWizard] = useState(false);
+  const [step, setStep] = useState('option_select');
+  const [selectedOption, setSelectedOption] = useState(null);
 
   useEffect(() => {
     axios.get(`${API_BASE_URL}/companies`).then(r => setCompanies(r.data?.companies || FALLBACK_COMPANIES)).catch(() => {});
