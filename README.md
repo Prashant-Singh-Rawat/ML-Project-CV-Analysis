@@ -65,6 +65,7 @@ An AI-driven practice module tracking technical responses. (Note: Current versio
 | **Backend** | FastAPI, Uvicorn, Python 3.12+ |
 | **ML/Analytics** | Scikit-Learn, Pandas, NumPy, Joblib |
 | **NLP** | spaCy (en_core_web_sm), PDFPlumber, RE |
+| **CI/CD** | GitHub Actions Pipeline (Automated testing & linting) |
 | **Export** | Browser Print-to-PDF Engine (Custom HTML Templates) |
 
 ---
@@ -91,6 +92,7 @@ python -m venv .venv
 .\.venv\Scripts\activate
 pip install -r requirements.txt
 python -m spacy download en_core_web_sm
+cp ../.env.example .env  # Or copy it manually if you're on Windows CMD
 uvicorn main:app --reload
 ```
 
@@ -107,6 +109,11 @@ npm run dev
 - **Live GitHub API Integration**: Real-time repository sentiment analysis.
 - **Generative AI Feedback**: Integration with LLMs for personalized interview coaching.
 - **Web3 Credential Issuance**: Real-world NFT/SBT minting of verified skill reports.
+
+---
+
+## 🤝 Community & Contributing
+We welcome contributions! Please check our GitHub Issues tab for requested features and bug fixes. Before participating, please read our [Code of Conduct](CODE_OF_CONDUCT.md) to ensure a welcoming environment for everyone.
 
 ---
 
