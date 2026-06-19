@@ -25,7 +25,7 @@ import {
   FiTrendingDown, FiAward, FiClock, FiCalendar, FiStar,
   FiX, FiCpu, FiDatabase, FiLayers, FiUsers, FiRefreshCw,
   FiCamera, FiShield, FiGithub, FiActivity, FiGlobe, FiLink,
-  FiBriefcase, FiTrendingUp, FiChevronDown, FiChevronUp
+  FiBriefcase, FiTrendingUp, FiChevronDown, FiChevronUp, FiMic
 } from 'react-icons/fi';
 
 ChartJS.register(ArcElement, Tooltip, Legend, RadialLinearScale, PointElement, LineElement, Filler, CategoryScale, LinearScale, BarElement);
