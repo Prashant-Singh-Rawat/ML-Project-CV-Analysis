@@ -189,7 +189,13 @@ const BiometricInterview = ({ isOpen, onClose }) => {
       } else {
         // Calculate average score
         const avg = updatedScores.reduce((acc, curr) => acc + curr.score, 0) / updatedScores.length;
-        setFinalScore(Math.round(avg));
+        const avgScore = Math.round(avg);
+        setFinalScore(avgScore);
+        localStorage.setItem('tonycv_latest_interview', JSON.stringify({
+          finalScore: avgScore,
+          questionScores: updatedScores,
+          timestamp: new Date().toISOString()
+        }));
         setShowResults(true);
       }
     } catch (err) {
@@ -211,7 +217,13 @@ const BiometricInterview = ({ isOpen, onClose }) => {
         setCurrentQuestionIndex(prev => prev + 1);
       } else {
         const avg = updatedScores.reduce((acc, curr) => acc + curr.score, 0) / updatedScores.length;
-        setFinalScore(Math.round(avg));
+        const avgScore = Math.round(avg);
+        setFinalScore(avgScore);
+        localStorage.setItem('tonycv_latest_interview', JSON.stringify({
+          finalScore: avgScore,
+          questionScores: updatedScores,
+          timestamp: new Date().toISOString()
+        }));
         setShowResults(true);
       }
     } finally {
