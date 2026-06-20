@@ -83,15 +83,16 @@ const RegisterPopup = ({ isOpen, onClose, onAuthSuccess }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-md p-8 bg-white border border-slate-200 shadow-2xl rounded-2xl mx-4">
-        {/* Close Button */}
-        <button 
-          onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 transition"
-        >
-          ✕
-        </button>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm animate-fade-in">
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div className="relative w-full max-w-md p-8 bg-white border border-slate-200 shadow-2xl rounded-2xl">
+          {/* Close Button */}
+          <button 
+            onClick={onClose}
+            className="absolute top-4 right-4 text-slate-500 hover:text-slate-900 transition flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-lg font-bold shadow-sm"
+          >
+            ✕
+          </button>
 
         <h3 className="text-2xl font-black text-slate-900 tracking-tight text-center mb-1">
           {mode === 'register' ? 'Join TonyCV' : 'Welcome Back'}
@@ -288,6 +289,7 @@ const RegisterPopup = ({ isOpen, onClose, onAuthSuccess }) => {
             </p>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
