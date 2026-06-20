@@ -39,8 +39,12 @@ const RegisterPopup = ({ isOpen, onClose, onAuthSuccess }) => {
           })
         });
 
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
         if (!response.ok) {
+          if (response.status === 409) {
+            setMode('login');
+            throw new Error("Account already exists. Please sign in instead.");
+          }
           throw new Error(data.detail || 'Registration failed');
         }
 
@@ -62,7 +66,7 @@ const RegisterPopup = ({ isOpen, onClose, onAuthSuccess }) => {
           })
         });
 
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
         if (!response.ok) {
           throw new Error(data.detail || 'Login failed');
         }
@@ -237,7 +241,14 @@ const RegisterPopup = ({ isOpen, onClose, onAuthSuccess }) => {
           )}
 
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Password</label>
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Password</label>
+              {mode === 'login' && (
+                <button type="button" onClick={() => alert("Forgot password functionality coming soon! Please contact support.")} className="text-[10px] font-bold text-blue-600 hover:underline">
+                  Forgot Password?
+                </button>
+              )}
+            </div>
             <input 
               type="password" 
               required 
