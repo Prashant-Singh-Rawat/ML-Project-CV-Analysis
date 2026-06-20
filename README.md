@@ -89,10 +89,17 @@ Run the provided PowerShell script from the root directory:
 ```bash
 cd backend
 python -m venv .venv
+
+# Activate virtual environment (Windows)
 .\.venv\Scripts\activate
+# Activate virtual environment (Mac/Linux)
+# source .venv/bin/activate
+
 pip install -r requirements.txt
 python -m spacy download en_core_web_sm
-cp ../.env.example .env  # Or copy it manually if you're on Windows CMD
+
+# Copy configuration template
+python -c "import shutil; shutil.copy('../.env.example', '.env')"
 uvicorn main:app --reload
 ```
 
