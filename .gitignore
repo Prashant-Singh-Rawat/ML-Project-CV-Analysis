@@ -1,0 +1,32 @@
+# System
+.DS_Store
+Thumbs.db
+
+# Dependencies
+node_modules/
+node_modules_bak/
+
+dist/
+.vite_cache/
+.github/
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.db
+.sqlite3
+
+# Env
+.env
+.env.local
+.env.production
+
+# Project Specific
+backend/ml_pipeline/models/*.joblib
+backend/ml_pipeline/models/*.pkl
+frontend/.dist/
+**/dist/
