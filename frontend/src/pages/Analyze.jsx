@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import InputForm from '../components/InputForm';
@@ -9,6 +9,12 @@ import {
   FiAward, FiHeart, FiFileText, FiCamera, FiPlus, FiTrash2, FiMaximize2
 } from 'react-icons/fi';
 import html2pdf from 'html2pdf.js';
+import SoftwareEngineerTemplate from '../components/templates/SoftwareEngineerTemplate';
+import DataScientistTemplate from '../components/templates/DataScientistTemplate';
+import AcademicResearchTemplate from '../components/templates/AcademicResearchTemplate';
+import HealthcareProfessionalTemplate from '../components/templates/HealthcareProfessionalTemplate';
+import BusinessExecutiveTemplate from '../components/templates/BusinessExecutiveTemplate';
+import CreativeDesignerTemplate from '../components/templates/CreativeDesignerTemplate';
 
 const isLocal =
   window.location.hostname === 'localhost' ||
@@ -190,7 +196,33 @@ function ResumeGraderScanner() {
 /* ─────────────────────────────────────────────
    LIVE RESUME PREVIEW
 ───────────────────────────────────────────── */
-function LiveResumePreview({ data, color, layout, photoEnabled }) {
+function LiveResumePreview({ data, color, layout, photoEnabled, templateId }) {
+  const tid = (templateId || '').toLowerCase().trim();
+
+  let templateContent = null;
+
+  if (tid === 'cascade' || tid === 'software-engineer') {
+    templateContent = <SoftwareEngineerTemplate data={data} color={color} photoEnabled={photoEnabled} />;
+  } else if (tid === 'cubic' || tid === 'data-scientist') {
+    templateContent = <DataScientistTemplate data={data} color={color} photoEnabled={photoEnabled} />;
+  } else if (tid === 'crisp' || tid === 'research-cv') {
+    templateContent = <AcademicResearchTemplate data={data} color={color} photoEnabled={photoEnabled} />;
+  } else if (tid === 'aria' || tid === 'healthcare') {
+    templateContent = <HealthcareProfessionalTemplate data={data} color={color} photoEnabled={photoEnabled} />;
+  } else if (tid === 'nexus' || tid === 'business-executive') {
+    templateContent = <BusinessExecutiveTemplate data={data} color={color} photoEnabled={photoEnabled} />;
+  } else if (tid === 'apex' || tid === 'creative-designer') {
+    templateContent = <CreativeDesignerTemplate data={data} color={color} photoEnabled={photoEnabled} />;
+  }
+
+  if (templateContent) {
+    return (
+      <div id="live-resume-preview" className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden w-full h-full" style={{ minHeight: 520 }}>
+        {templateContent}
+      </div>
+    );
+  }
+
   return (
     <div
       id="live-resume-preview"
@@ -285,19 +317,61 @@ function LiveResumePreview({ data, color, layout, photoEnabled }) {
 /* ─────────────────────────────────────────────
    MAIN ANALYZE PAGE
 ───────────────────────────────────────────── */
+/* ─────────────────────────────────────────────
+   Template colour map — shared by the lazy
+   state initialisers and the wizard banner.
+───────────────────────────────────────────── */
+const TEMPLATE_COLOR_MAP = {
+  cascade: '#2563eb',
+  cubic:   '#10b981',
+  crisp:   '#6366f1',
+  nexus:   '#f97316',
+  aria:    '#06b6d4',
+  apex:    '#8b5cf6',
+};
+
+/**
+ * Read React Router's location state *synchronously* at init time.
+ * window.history.state.usr is where React Router v6 stores { state }.
+ * Falling back to null is safe — it just means a direct /analyze visit.
+ */
+function getRouterState() {
+  try { return window.history.state?.usr ?? null; } catch { return null; }
+}
+
 export default function Analyze() {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // -- Wizard state --
-  const [step, setStep] = useState('option_select');
-  const [selectedOption, setSelectedOption] = useState(null);
+  // ── Lazy initialisers: read router state once, synchronously ──
+  // This means the correct step is set on the VERY FIRST render —
+  // no intermediate flash of the option-select screen.
+  const [step, setStep] = useState(() => {
+    const s = getRouterState();
+    return s?.startMode === 'scratch' ? 'wizard_experience' : 'option_select';
+  });
+
+  const [selectedOption, setSelectedOption] = useState(() => {
+    const s = getRouterState();
+    return s?.startMode === 'scratch' ? 'scratch' : null;
+  });
+
+  const [appliedTemplate, setAppliedTemplate] = useState(() => {
+    const s = getRouterState();
+    return s?.templateId ?? null;
+  });
 
   // Onboarding answers
   const [experience, setExperience] = useState(null);
   const [isStudent, setIsStudent] = useState(null);
   const [photoEnabled, setPhotoEnabled] = useState(false);
   const [layoutPref, setLayoutPref] = useState('Two columns');
-  const [selectedColor, setSelectedColor] = useState(TEMPLATE_COLORS[0].value);
+
+  const [selectedColor, setSelectedColor] = useState(() => {
+    const s = getRouterState();
+    const color = s?.templateId ? TEMPLATE_COLOR_MAP[s.templateId] : null;
+    return color ?? TEMPLATE_COLORS[0].value;
+  });
 
   // Resume form data
   const [resumeData, setResumeData] = useState({
@@ -410,6 +484,7 @@ export default function Analyze() {
           {/* ── STEP 1: Option Select ── */}
           {step === 'option_select' && (
             <motion.div key="option_select" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+
               <div className="text-center mb-12">
                 <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-full px-5 py-2 text-blue-700 text-sm font-semibold mb-5">
                   <FiFileText size={14} /> TonyCV · AI Resume Analyser
@@ -471,7 +546,26 @@ export default function Analyze() {
           {/* ── STEP 2: Experience Level ── */}
           {step === 'wizard_experience' && (
             <motion.div key="wizard_experience" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }}>
-              <WizardShell title="How long have you been working?" subtitle="This helps us tailor your resume to your career stage." onBack={() => setStep('option_select')}>
+              {/* Template applied banner */}
+              {appliedTemplate && (
+                <motion.div
+                  initial={{ opacity: 0, y: -12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="max-w-2xl mx-auto mb-6 flex items-center gap-3 px-5 py-3 rounded-2xl border text-sm font-semibold"
+                  style={{
+                    background: selectedColor + '12',
+                    borderColor: selectedColor + '40',
+                    color: selectedColor,
+                  }}
+                >
+                  <span className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-black" style={{ background: selectedColor }}>✓</span>
+                  <span>
+                    <span className="capitalize font-black">{appliedTemplate}</span> template applied —
+                    its accent colour has been pre-selected. You can change it in the colour step.
+                  </span>
+                </motion.div>
+              )}
+              <WizardShell title="How long have you been working?" subtitle="This helps us tailor your resume to your career stage." onBack={() => { setAppliedTemplate(null); setStep('option_select'); }}>
                 <div className="grid sm:grid-cols-3 gap-4 max-w-2xl mx-auto">
                   {[
                     { label: 'No Experience', icon: <FiStar size={28} />, desc: 'Student or first-time jobseeker' },
@@ -784,7 +878,7 @@ export default function Analyze() {
                       </div>
                     </div>
                     <div className="overflow-hidden rounded-2xl shadow-2xl" style={{ transform: 'scale(0.75)', transformOrigin: 'top center', marginBottom: '-25%' }}>
-                      <LiveResumePreview data={resumeData} color={selectedColor} layout={layoutPref} photoEnabled={photoEnabled} />
+                      <LiveResumePreview data={resumeData} color={selectedColor} layout={layoutPref} photoEnabled={photoEnabled} templateId={appliedTemplate} />
                     </div>
                   </div>
                 </div>
