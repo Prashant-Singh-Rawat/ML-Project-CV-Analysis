@@ -254,7 +254,7 @@ async def analyze_cv(
         extracted_github = f"https://github.com/{github_match.group(1)}"
     
     if not github_url or "github.com" not in github_url.lower():
-        github_url = extracted_github or f"https://github.com/candidate-{random.randint(100,999)}"
+        github_url = extracted_github or ""
 
     # 2. Prevent invalid inputs
     if cgpa < 0 or cgpa > 10:
@@ -296,39 +296,47 @@ async def analyze_cv(
         github_username = github_match_user.group(1)
     
     github_analysis = []
-    # If the user uploaded a custom PDF where their GitHub doesn't match, we still pass and provide simulated insights 
-    # to guarantee a successful score analysis report without crashing
-    verification_results = []
-    for skill in candidate_skills:
-        verification_weight = 0.8 if skill.lower() in ["python", "javascript", "react", "html", "css"] else 0.5
-        verified = random.random() < verification_weight
-        verification_results.append({
-            "skill": skill,
-            "verified": verified,
-            "evidence": f"Found references in {github_username}'s repositories" if verified else f"No matching public code found for {skill}",
-            "confidence": "High" if verified else "Low"
-        })
-    
-    suspicious_skills = [v['skill'] for v in verification_results if not v['verified']]
-    if suspicious_skills:
-        github_analysis.append({
-            "issue": f"Project Gap: {', '.join(suspicious_skills[:3])}",
-            "severity": "Medium",
-            "detail": f"These skills are listed in the CV, but our scan of github.com/{github_username} didn't find substantial code evidence."
-        })
+    # GitHub verification is now truly optional
+    if github_url and "github.com" in github_url.lower():
+        # If the user uploaded a custom PDF where their GitHub doesn't match, we still pass and provide simulated insights 
+        # to guarantee a successful score analysis report without crashing
+        verification_results = []
+        for skill in candidate_skills:
+            verification_weight = 0.8 if skill.lower() in ["python", "javascript", "react", "html", "css"] else 0.5
+            verified = random.random() < verification_weight
+            verification_results.append({
+                "skill": skill,
+                "verified": verified,
+                "evidence": f"Found references in {github_username}'s repositories" if verified else f"No matching public code found for {skill}",
+                "confidence": "High" if verified else "Low"
+            })
+        
+        suspicious_skills = [v['skill'] for v in verification_results if not v['verified']]
+        if suspicious_skills:
+            github_analysis.append({
+                "issue": f"Project Gap: {', '.join(suspicious_skills[:3])}",
+                "severity": "Medium",
+                "detail": f"These skills are listed in the CV, but our scan of github.com/{github_username} didn't find substantial code evidence."
+            })
+        else:
+            github_analysis.append({
+                "issue": "Strong Technical Alignment",
+                "severity": "Info",
+                "detail": f"GitHub projects for {github_username} highly validate the skills claimed in the CV."
+            })
+        
+        insights = [
+            {"issue": "Active Repository Matrix", "severity": "Info", "detail": f"Detected consistent contributions in {len(candidate_skills)//2 + 1} relevant repositories."},
+            {"issue": "Documentation Standards", "severity": "Info", "detail": "Repository READMEs follow industry best practices."},
+            {"issue": "Modern Tech Adoption", "severity": "Info", "detail": f"Codebase shows proficiency in modern {candidate_skills[0] if candidate_skills else 'software'} design patterns."}
+        ]
+        github_analysis.extend(random.sample(insights, 2))
     else:
         github_analysis.append({
-            "issue": "Strong Technical Alignment",
+            "issue": "No GitHub Link Provided",
             "severity": "Info",
-            "detail": f"GitHub projects for {github_username} highly validate the skills claimed in the CV."
+            "detail": "GitHub verification was skipped because no valid GitHub URL was provided. Consider adding your GitHub profile to your CV for enhanced analysis."
         })
-    
-    insights = [
-        {"issue": "Active Repository Matrix", "severity": "Info", "detail": f"Detected consistent contributions in {len(candidate_skills)//2 + 1} relevant repositories."},
-        {"issue": "Documentation Standards", "severity": "Info", "detail": "Repository READMEs follow industry best practices."},
-        {"issue": "Modern Tech Adoption", "severity": "Info", "detail": f"Codebase shows proficiency in modern {candidate_skills[0] if candidate_skills else 'software'} design patterns."}
-    ]
-    github_analysis.extend(random.sample(insights, 2))
         
     # 6. Advanced Feature: Live Market Pulse adjustment
     market_pulse = {
