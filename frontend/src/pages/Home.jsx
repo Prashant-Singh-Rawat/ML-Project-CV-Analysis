@@ -12,6 +12,12 @@ import {
   FiPlus, FiTrash2
 } from 'react-icons/fi';
 import html2pdf from 'html2pdf.js';
+import SoftwareEngineerTemplate from '../components/templates/SoftwareEngineerTemplate';
+import DataScientistTemplate from '../components/templates/DataScientistTemplate';
+import AcademicResearchTemplate from '../components/templates/AcademicResearchTemplate';
+import HealthcareProfessionalTemplate from '../components/templates/HealthcareProfessionalTemplate';
+import BusinessExecutiveTemplate from '../components/templates/BusinessExecutiveTemplate';
+import CreativeDesignerTemplate from '../components/templates/CreativeDesignerTemplate';
 import RegisterPopup from '../components/RegisterPopup';
 
 const isLocal =
@@ -190,7 +196,33 @@ function ResumeGraderScanner() {
 /* ─────────────────────────────────────────────
    LIVE RESUME PREVIEW
 ───────────────────────────────────────────── */
-function LiveResumePreview({ data, color, layout, photoEnabled }) {
+function LiveResumePreview({ data, color, layout, photoEnabled, templateId }) {
+  const tid = (templateId || '').toLowerCase().trim();
+
+  let templateContent = null;
+
+  if (tid === 'cascade' || tid === 'software-engineer') {
+    templateContent = <SoftwareEngineerTemplate data={data} color={color} photoEnabled={photoEnabled} />;
+  } else if (tid === 'cubic' || tid === 'data-scientist') {
+    templateContent = <DataScientistTemplate data={data} color={color} photoEnabled={photoEnabled} />;
+  } else if (tid === 'crisp' || tid === 'research-cv') {
+    templateContent = <AcademicResearchTemplate data={data} color={color} photoEnabled={photoEnabled} />;
+  } else if (tid === 'aria' || tid === 'healthcare') {
+    templateContent = <HealthcareProfessionalTemplate data={data} color={color} photoEnabled={photoEnabled} />;
+  } else if (tid === 'nexus' || tid === 'business-executive') {
+    templateContent = <BusinessExecutiveTemplate data={data} color={color} photoEnabled={photoEnabled} />;
+  } else if (tid === 'apex' || tid === 'creative-designer') {
+    templateContent = <CreativeDesignerTemplate data={data} color={color} photoEnabled={photoEnabled} />;
+  }
+
+  if (templateContent) {
+    return (
+      <div id="live-resume-preview" className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden w-full h-full" style={{ minHeight: 520 }}>
+        {templateContent}
+      </div>
+    );
+  }
+
   return (
     <div
       id="live-resume-preview"
