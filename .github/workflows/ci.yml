@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [ "main" ]
 
+# Allow GitHub Actions to deploy to Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   build-frontend:
     runs-on: ubuntu-latest
@@ -20,6 +26,22 @@ jobs:
       run: |
         npm install
         npm run build
+    - name: Upload Pages artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: ./frontend/dist
+
+  deploy-frontend:
+    needs: build-frontend
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
 
   build-backend:
     runs-on: ubuntu-latest
@@ -50,3 +72,4 @@ jobs:
     - name: Pre-download BERT model
       run: |
         python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
+

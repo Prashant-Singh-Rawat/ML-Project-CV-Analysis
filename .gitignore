@@ -8,7 +8,6 @@ node_modules_bak/
 
 dist/
 .vite_cache/
-.github/
 
 # Python
 venv/
