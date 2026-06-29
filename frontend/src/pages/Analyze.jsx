@@ -209,9 +209,13 @@ function LiveResumePreview({ data, color, layout, photoEnabled, templateId }) {
     templateContent = <AcademicResearchTemplate data={data} color={color} photoEnabled={photoEnabled} />;
   } else if (tid === 'aria' || tid === 'healthcare') {
     templateContent = <HealthcareProfessionalTemplate data={data} color={color} photoEnabled={photoEnabled} />;
-  } else if (tid === 'nexus' || tid === 'business-executive') {
+  } else if (tid === 'nexus') {
+    templateContent = <CreativeDesignerTemplate data={data} color={color} photoEnabled={photoEnabled} />;
+  } else if (tid === 'business-executive') {
     templateContent = <BusinessExecutiveTemplate data={data} color={color} photoEnabled={photoEnabled} />;
-  } else if (tid === 'apex' || tid === 'creative-designer') {
+  } else if (tid === 'apex') {
+    templateContent = <BusinessExecutiveTemplate data={data} color={color} photoEnabled={photoEnabled} />;
+  } else if (tid === 'creative-designer') {
     templateContent = <CreativeDesignerTemplate data={data} color={color} photoEnabled={photoEnabled} />;
   }
 
