@@ -23,6 +23,19 @@ TonyCV utilizes a decoupled micro-architecture designed for scalability and high
 - **Data Persistence**: LocalStorage and session-based state management for ultra-fast, offline-capable performance.
 
 ---
+## 📋 Table of Contents
+
+- [📖 Project Overview](#-project-overview)
+- [🏗️ System Architecture](#️-system-architecture)
+- [🧬 Core Technical Innovation](#-core-technical-innovation-patent-ready-concepts)
+- [✨ Key Modules](#-key-modules)
+- [🛠️ Technology Stack](#️-technology-stack)
+- [🚀 Local Development Setup](#-local-development-setup)
+- [☁️ Production Deployment](#️-production-deployment)
+- [📈 Future Roadmap](#-future-roadmap)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
+- [📞 Contact](#-contact)
 
 ## 🧬 Core Technical Innovation (Patent-Ready Concepts)
 
@@ -182,6 +195,20 @@ npm run build
 
 ---
 
+## 🤝 Contributing
+
+We welcome contributions from the community! Here's how you can help make TonyCV better:
+
+### How to Contribute
+
+1. **Fork the repository**
+   - Click the "Fork" button on the top right of the repository page.
+
+2. **Clone your fork**
+   ```bash
+   git clone https://github.com/your-username/ML-Project-CV-Analysis.git
+   cd ML-Project-CV-Analysis
+   
 ## 📈 Future Roadmap
 - **Live GitHub API Integration**: Real-time repository sentiment analysis.
 - **Generative AI Feedback**: Integration with LLMs for personalized interview coaching.
