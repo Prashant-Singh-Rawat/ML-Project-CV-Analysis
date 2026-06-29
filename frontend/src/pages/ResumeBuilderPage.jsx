@@ -6,6 +6,7 @@ import {
   FiStar, FiLayout, FiZap, FiEye, FiGrid, FiList,
 } from 'react-icons/fi';
 import TemplateGalleryModal from '../components/TemplateGalleryModal';
+import ResumeTemplatePreview from '../components/ResumeTemplatePreview';
 
 /* ─────────────────── DATA ─────────────────── */
 
@@ -19,7 +20,6 @@ const TEMPLATES = [
     color: '#2563eb',
     category: 'Modern',
     tags: ['Two-Column', 'Tech', 'ATS-Ready', 'Corporate'],
-    image: '/templates/cascade.png',
     features: [
       'Striking navy sidebar with skill bars',
       'Timeline-style work experience',
@@ -36,7 +36,6 @@ const TEMPLATES = [
     color: '#10b981',
     category: 'Modern',
     tags: ['Grid Layout', 'Header Banner', 'Modern', 'Fresh'],
-    image: '/templates/cubic.png',
     features: [
       'Eye-catching full-width header',
       'Two-column lower section for space efficiency',
@@ -53,7 +52,6 @@ const TEMPLATES = [
     color: '#6366f1',
     category: 'Classic',
     tags: ['Single-Column', 'ATS-Optimised', 'Universal', 'Traditional'],
-    image: '/templates/crisp.png',
     features: [
       'Traditional recruiter-friendly format',
       'Elegant section dividers',
@@ -66,17 +64,16 @@ const TEMPLATES = [
   {
     id: 'nexus',
     name: 'Nexus',
-    desc: 'Dark executive header with vivid orange accents — commands attention and radiates senior-level confidence.',
+    desc: 'Bold asymmetric layout with gradient accents and personality — built for designers who want their resume to feel like a portfolio piece.',
     color: '#f97316',
     category: 'Creative',
-    tags: ['Dark Header', 'Bold', 'Creative', 'Stand-Out'],
-    image: '/templates/nexus.png',
+    tags: ['Asymmetric Layout', 'Portfolio-Style', 'Creative', 'Stand-Out'],
     features: [
-      'Premium dark-accent header block',
-      'Impact metric highlights',
-      'Skills dot-rating system',
-      'Project and achievement callouts',
-      'Great for creative & tech leadership',
+      'Gradient-pill section headers with bold typography',
+      'Asymmetric two-column portfolio-style layout',
+      'Skill tags with subtle hover motion',
+      'Dedicated portfolio/project experience section',
+      'Great for designers, illustrators & creative leads',
     ],
     popular: false,
   },
@@ -87,7 +84,6 @@ const TEMPLATES = [
     color: '#06b6d4',
     category: 'Minimal',
     tags: ['Minimal', 'ATS-Max', 'Clean', 'Content-First'],
-    image: '/templates/aria.png',
     features: [
       'Maximum ATS compatibility',
       'Zero-noise typography-only design',
@@ -100,16 +96,15 @@ const TEMPLATES = [
   {
     id: 'apex',
     name: 'Apex',
-    desc: 'Bold purple sidebar with amber highlights — a boardroom-ready executive layout that opens C-suite doors.',
+    desc: 'Bold sidebar layout with premium corporate styling — a boardroom-ready executive resume that opens C-suite doors.',
     color: '#8b5cf6',
     category: 'Executive',
     tags: ['Executive', 'C-Suite', 'Leadership', 'Premium'],
-    image: '/templates/apex.png',
     features: [
       'Premium sidebar with photo placeholder',
       'Executive summary & core competencies',
-      'Key achievements highlight panel',
-      'Board positions & advisorships section',
+      'Leadership achievements highlight panel',
+      'Dedicated education & credentials section',
       'Strategic leadership-focused layout',
     ],
     popular: true,
@@ -152,13 +147,18 @@ function TemplateCard({ template, isSelected, onSelect, onPreview }) {
           height: 220,
         }}
       >
+        {/* Category badge — matches the CV Examples gallery styling */}
+        <div
+          className="absolute top-3 left-3 z-10 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider text-white shadow"
+          style={{ background: template.color }}
+        >
+          {template.category}
+        </div>
+
         {/* Popular badge */}
-        {template.popular && (
-          <div
-            className="absolute top-3 left-3 z-10 flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider text-white shadow"
-            style={{ background: template.color }}
-          >
-            <FiStar size={9} /> Popular
+        {template.popular && !isSelected && (
+          <div className="absolute top-3 right-3 z-10 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black text-amber-700 bg-amber-100 shadow">
+            <FiStar size={8} /> Popular
           </div>
         )}
 
@@ -172,12 +172,8 @@ function TemplateCard({ template, isSelected, onSelect, onPreview }) {
           </div>
         )}
 
-        {/* Template image */}
-        <img
-          src={template.image}
-          alt={`${template.name} resume template`}
-          className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
-        />
+        {/* Live template preview (clipped page peek) */}
+        <ResumeTemplatePreview templateId={template.id} color={template.color} mode="thumbnail" />
 
         {/* Hover overlay with View Example button */}
         <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-all duration-300">
@@ -195,15 +191,7 @@ function TemplateCard({ template, isSelected, onSelect, onPreview }) {
       {/* Card footer */}
       <div className="p-4 bg-white flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            <h4 className="font-black text-slate-900 text-base">{template.name}</h4>
-            <span
-              className="hidden sm:inline text-[10px] font-bold px-2 py-0.5 rounded-full"
-              style={{ color: template.color, background: template.color + '15' }}
-            >
-              {template.category}
-            </span>
-          </div>
+          <h4 className="font-black text-slate-900 text-base mb-0.5">{template.name}</h4>
           <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{template.desc}</p>
         </div>
         <button
@@ -400,6 +388,9 @@ export default function ResumeBuilderPage() {
             onNext={handleNext}
             hasPrev={previewIndex > 0}
             hasNext={previewIndex < filtered.length - 1}
+            renderCustomPreview={() => (
+              <ResumeTemplatePreview templateId={previewTemplate.id} color={previewTemplate.color} mode="full" />
+            )}
           />
         )}
       </AnimatePresence>
