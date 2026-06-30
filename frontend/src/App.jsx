@@ -13,6 +13,15 @@ import CoverLetterPage from './pages/CoverLetterPage';
 import CareerBlogPage from './pages/CareerBlogPage';
 import AboutPage from './pages/AboutPage';
 import RegisterPopup from './components/RegisterPopup';
+// New Feature Pages
+import ResumeRewritePage from './pages/ResumeRewritePage';
+import AtsScorePage from './pages/AtsScorePage';
+import JdMatchPage from './pages/JdMatchPage';
+import CareerRoadmapPage from './pages/CareerRoadmapPage';
+import InterviewSimulatorPage from './pages/InterviewSimulatorPage';
+import SalaryPredictPage from './pages/SalaryPredictPage';
+import SkillGapPage from './pages/SkillGapPage';
+import PortfolioAnalyzerPage from './pages/PortfolioAnalyzerPage';
 
 /* ── Scroll-to-top on route change ── */
 function ScrollToTop() {
@@ -91,12 +100,22 @@ function Navbar({ user, onLogout, onOpenRegister }) {
   const resumeDropItems = [
     { label: 'Resume Builder', to: '/resume-builder', icon: '🛠️' },
     { label: 'Upload & Analyse', to: '/analyze', icon: '📊' },
-    { label: 'Resume Templates', to: '/resume-builder', icon: '📄' },
+    { label: 'AI Rewrite Assistant', to: '/ai-rewrite', icon: '✨' },
+    { label: 'ATS Score Checker', to: '/ats-score', icon: '📊' },
   ];
 
   const cvDropItems = [
     { label: 'CV Builder', to: '/cv', icon: '📋' },
+    { label: 'JD Matcher', to: '/jd-match', icon: '🎯' },
     { label: 'CV vs Resume Guide', to: '/cv', icon: '📖' },
+  ];
+
+  const careerDropItems = [
+    { label: 'Career Roadmap', to: '/career-roadmap', icon: '🗺️' },
+    { label: 'Skill Gap Analysis', to: '/skill-gap', icon: '📈' },
+    { label: 'Portfolio Analyzer', to: '/portfolio-analyzer', icon: '🌐' },
+    { label: 'Interview Simulator', to: '/interview-simulator', icon: '🎤' },
+    { label: 'Salary Predictor', to: '/salary-predict', icon: '💰' },
   ];
 
   return (
@@ -115,11 +134,12 @@ function Navbar({ user, onLogout, onOpenRegister }) {
 
         {/* Desktop Nav */}
         <div className="hidden lg:flex items-center gap-5 text-sm font-semibold text-slate-600">
-          <Link to="/" className="hover:text-blue-600 transition-colors">Tools</Link>
+          <Link to="/" className="hover:text-blue-600 transition-colors">Home</Link>
           <NavDropdown label="Resume" items={resumeDropItems} />
           <NavDropdown label="CV" items={cvDropItems} />
+          <NavDropdown label="Career" items={careerDropItems} />
           <Link to="/cover-letter" className="hover:text-blue-600 transition-colors">Cover Letter</Link>
-          <Link to="/career-blog" className="hover:text-blue-600 transition-colors">Career Blog</Link>
+          <Link to="/career-blog" className="hover:text-blue-600 transition-colors">Blog</Link>
           <Link to="/about" className="hover:text-blue-600 transition-colors">About</Link>
         </div>
 
@@ -279,6 +299,15 @@ function App() {
           <Route path="/cover-letter" element={<CoverLetterPage />} />
           <Route path="/career-blog" element={<CareerBlogPage />} />
           <Route path="/about" element={<AboutPage />} />
+          {/* New Feature Routes */}
+          <Route path="/ai-rewrite" element={<ResumeRewritePage />} />
+          <Route path="/ats-score" element={<AtsScorePage />} />
+          <Route path="/jd-match" element={<JdMatchPage />} />
+          <Route path="/career-roadmap" element={<CareerRoadmapPage />} />
+          <Route path="/interview-simulator" element={<InterviewSimulatorPage />} />
+          <Route path="/salary-predict" element={<SalaryPredictPage />} />
+          <Route path="/skill-gap" element={<SkillGapPage />} />
+          <Route path="/portfolio-analyzer" element={<PortfolioAnalyzerPage />} />
           {/* Catch-all → Home */}
           <Route path="*" element={<Home />} />
         </Routes>

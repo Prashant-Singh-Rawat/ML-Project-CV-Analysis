@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI/CD Pipeline — TonyCV v3.0.0
 
 on:
   push:
@@ -13,26 +13,75 @@ permissions:
   id-token: write
 
 jobs:
+  # ── 1. BACKEND: Install & validate ──────────────────────────────────────────
+  build-backend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Cache pip packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Cache BERT model (sentence-transformers)
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/huggingface
+        key: ${{ runner.os }}-hf-all-MiniLM-L6-v2
+
+    - name: Install backend dependencies
+      working-directory: ./backend
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Pre-download BERT model
+      run: |
+        python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
+
+    - name: Validate new feature routes import
+      working-directory: ./backend
+      run: |
+        python -c "from routes.features import router; print('✅ Feature router OK — endpoints:', len(router.routes))"
+
+  # ── 2. FRONTEND: Build & upload artifact ────────────────────────────────────
   build-frontend:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Use Node.js
+
+    - name: Use Node.js 20
       uses: actions/setup-node@v4
       with:
         node-version: '20.x'
-    - name: Install dependencies and build
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install frontend dependencies
       working-directory: ./frontend
-      run: |
-        npm install
-        npm run build
+      run: npm ci
+
+    - name: Build frontend (Vite)
+      working-directory: ./frontend
+      run: npm run build
+
     - name: Upload Pages artifact
       uses: actions/upload-pages-artifact@v3
       with:
         path: ./frontend/dist
 
+  # ── 3. DEPLOY: GitHub Pages (main branch only) ──────────────────────────────
   deploy-frontend:
-    needs: build-frontend
+    needs: [build-frontend, build-backend]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     environment:
@@ -42,34 +91,3 @@ jobs:
     - name: Deploy to GitHub Pages
       id: deployment
       uses: actions/deploy-pages@v4
-
-  build-backend:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-    - name: Cache pip packages
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-    - name: Cache BERT model
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/huggingface
-        key: ${{ runner.os }}-hf-all-MiniLM-L6-v2
-    - name: Install dependencies
-      working-directory: ./backend
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1.tar.gz
-    - name: Pre-download BERT model
-      run: |
-        python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
-

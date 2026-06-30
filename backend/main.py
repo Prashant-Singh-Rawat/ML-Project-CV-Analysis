@@ -28,6 +28,9 @@ app.add_middleware(
 # Include auth router
 app.include_router(auth_router)
 
+from routes.features import router as features_router
+app.include_router(features_router)
+
 # Initialize Model Manager
 model_manager = ModelManager()
 

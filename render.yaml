@@ -1,11 +1,17 @@
 services:
-  # Backend API Service (Deployed on Render)
+  # ── Backend API Service (Render Web Service) ──────────────────────────────
   - type: web
-    name: tony-health-backend
+    name: tonycv-backend
     env: python
     rootDir: backend
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
-        value: 3.10.0
+        value: 3.12.0
+      - key: JWT_SECRET_KEY
+        generateValue: true
+    healthCheckPath: /docs
+    autoDeploy: true

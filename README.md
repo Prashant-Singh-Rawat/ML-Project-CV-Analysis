@@ -1,93 +1,83 @@
-# 🚀 TonyCV: AI-Powered Recruitment Intelligence Platform
+# 🚀 TonyCV: AI-Powered Career Intelligence Platform
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python: 3.12+](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
 [![React: 19](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110-009688.svg)](https://fastapi.tiangolo.com/)
 [![ML: Scikit-Learn](https://img.shields.io/badge/ML-Scikit--Learn-F7931E.svg)](https://scikit-learn.org/)
 [![Frontend: GitHub Pages](https://img.shields.io/badge/Frontend-GitHub%20Pages-222222.svg)](https://prashant-singh-rawat.github.io/ML-Project-CV-Analysis/)
 [![Backend: Render](https://img.shields.io/badge/Backend-Render-46E3B7.svg)](https://tonycv-backend.onrender.com)
+[![CI/CD](https://github.com/Prashant-Singh-Rawat/ML-Project-CV-Analysis/actions/workflows/ci.yml/badge.svg)](https://github.com/Prashant-Singh-Rawat/ML-Project-CV-Analysis/actions)
 
-**TonyCV** is a state-of-the-art, end-to-end recruitment intelligence platform designed to bridge the gap between candidates and recruiters using advanced Natural Language Processing (NLP) and Machine Learning (ML). It transforms static resumes into dynamic, data-driven career roadmaps while providing recruiters with verified, high-confidence candidate scores.
+**TonyCV** is a production-grade, end-to-end AI career intelligence platform that goes far beyond resume parsing. It combines advanced NLP, semantic ML matching, and an interactive career coaching suite — giving candidates, job seekers, and recruiters a complete 360° talent analysis system.
 
 🌐 **Live App**: [prashant-singh-rawat.github.io/ML-Project-CV-Analysis](https://prashant-singh-rawat.github.io/ML-Project-CV-Analysis/)
+🔗 **API Backend**: [tonycv-backend.onrender.com](https://tonycv-backend.onrender.com)
+
+---
+
+## 🆕 What's New — v3.0.0 (Latest)
+
+| Feature | Route | Description |
+|:---|:---|:---|
+| ✨ AI Resume Rewrite Assistant | `/ai-rewrite` | Transforms generic resume content into ATS-optimized language |
+| 📊 ATS Resume Score | `/ats-score` | Comprehensive 0–100 ATS compatibility score with recommendations |
+| 🎯 Job Description Matcher | `/jd-match` | Match your CV against any JD with semantic similarity analysis |
+| 🗺️ Interactive Career Roadmap | `/career-roadmap` | Personalized step-by-step career growth plan |
+| 🐙 GitHub Intelligence | `/portfolio-analyzer` | Deep GitHub developer score, language analysis & activity |
+| 🌐 Portfolio Analyzer | `/portfolio-analyzer` | Multi-platform (GitHub, LinkedIn, LeetCode) portfolio review |
+| 🎤 AI Interview Simulator | `/interview-simulator` | Technical, HR & behavioral interview practice with scoring |
+| 💰 Salary Predictor | `/salary-predict` | AI-estimated salary ranges by role, location & skills |
+| 📈 Skill Gap Analysis | `/skill-gap` | Interactive gap dashboard with curated learning resources |
+| 🏆 Recruiter Dashboard | `/recruiter` | Multi-candidate ranking, comparison & export tools |
+| 🧠 Explainable AI | (integrated) | Human-readable factor explanations for every ML prediction |
+| 📊 Analytics Dashboard | (integrated) | Application tracking and score improvement history |
 
 ---
 
 ## 🏛️ System Architecture
 
-TonyCV utilizes a decoupled micro-architecture designed for scalability and high-performance analysis:
-
-- **Frontend Application**: A React 19 (Vite) single-page application hosted on **GitHub Pages**, utilizing atomic design principles, glassmorphic UI, and real-time state persistence.
-- **Mobile Application**: A native Android build wrapped using Capacitor for mobile recruitment experiences.
-- **NLP & ML Engine**: A FastAPI (Python) backend deployed on **Render**, serving as the core computational layer, handling vector extraction and predictive inference.
-- **Data Persistence**: LocalStorage and session-based state management for ultra-fast, offline-capable performance.
-
----
-## 📋 Table of Contents
-
-- [📖 Project Overview](#-project-overview)
-- [🏗️ System Architecture](#️-system-architecture)
-- [🧬 Core Technical Innovation](#-core-technical-innovation-patent-ready-concepts)
-- [✨ Key Modules](#-key-modules)
-- [🛠️ Technology Stack](#️-technology-stack)
-- [🚀 Local Development Setup](#-local-development-setup)
-- [☁️ Production Deployment](#️-production-deployment)
-- [📈 Future Roadmap](#-future-roadmap)
-- [🤝 Contributing](#-contributing)
-- [📄 License](#-license)
-- [📞 Contact](#-contact)
-
-## 🧬 Core Technical Innovation (Patent-Ready Concepts)
-
-### 1. Multi-Vector NLP Parsing Engine
-Unlike standard ATS systems, TonyCV employs a multi-tiered parsing strategy:
-- **Heuristic Tokenization**: Custom rules to normalize erratic resume formatting.
-- **Entity Recognition (NER)**: Powered by `spaCy`, extracting `ORG` (Organizations), `PERSON` (Identity), and `GPE` (Geographic markers) to build a candidate identity graph.
-- **Taxonomy Matching**: A propriety skills database cross-referenced against raw text to identify not just keywords, but contextual proficiencies.
-
-### 2. Random Forest Predictive Scoring
-The system utilizes an ensemble learning approach via `RandomForestClassifier` (100 Decision Trees) to predict placement probability.
-- **Feature Convergence**: CGPA metrics, normalized Skill Match percentages, and company-specific "cultural fit" weights are converged into a unified feature vector.
-- **Aesthetic Probability Calibration**: Raw ML probabilities are passed through a regression filter to provide human-readable score gradients (High/Medium/Low Chance).
-
-### 3. Automated Identity & Authority Verification
-A unique security layer that cross-references CV claims with external digital footprints:
-- **GitHub Metadata Audit**: Scans provided repository URLs to check for username match, code ownership evidence, and technical alignment.
-- **Blockchain Credentialing (Simulated)**: Generates immutable hashes of analysis reports to prevent credential tampering.
-
----
-
-## ✨ Key Modules
-
-### 📊 Intelligence Dashboard
-Interactive visualizations using `Chart.js` including:
-- **Placement Gauge**: Real-time probability tracking.
-- **Skill Gap Heatmap**: Highlighting missing proficiencies vs. target requirements.
-- **Industry Benchmark Radar**: Comparing the candidate against 10,000+ industry-standard profiles.
-
-### 🌳 Dynamic Career Roadmap
-A visual, tree-based progression engine that calculates the "Shortest Path to Placement":
-- **Upskilling Milestones**: Specific, time-bound tasks to bridge skill gaps.
-- **Resource Aggregator**: Curated links to high-authority documentation and courses (Coursera, MDN, Kaggle, etc.).
-
-### 🎤 Biometric Interview Simulation
-An AI-driven practice module tracking technical responses. (Note: Current version simulates marker tracking for professional growth practice).
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    TonyCV v3.0.0                            │
+├──────────────────────┬──────────────────────────────────────┤
+│   FRONTEND (Vite)    │          BACKEND (FastAPI)           │
+│   React 19           │  ┌──────────────────────────────┐   │
+│   Tailwind CSS       │  │  ML Pipeline                 │   │
+│   Framer Motion      │  │  ├─ RandomForestClassifier   │   │
+│   React Router v6    │  │  ├─ BERT Semantic Matcher    │   │
+│                      │  │  └─ spaCy NLP Parser         │   │
+│   8 New Feature Pages│  ├──────────────────────────────┤   │
+│   + 7 Existing Pages │  │  Feature Router (/features/) │   │
+│                      │  │  ├─ /rewrite                 │   │
+│   GitHub Pages Host  │  │  ├─ /ats-score               │   │
+│                      │  │  ├─ /jd-match                │   │
+│                      │  │  ├─ /roadmap                 │   │
+│                      │  │  ├─ /github-stats            │   │
+│                      │  │  ├─ /interview/question      │   │
+│                      │  │  ├─ /salary-predict          │   │
+│                      │  │  └─ /skill-gap-recommendations│   │
+│                      │  │  Auth Router (/auth/)         │   │
+│                      │  │  Core Router (/analyze, etc.) │   │
+│                      │  └──────────────────────────────┘   │
+│                      │          Render.com Host            │
+└──────────────────────┴──────────────────────────────────────┘
+```
 
 ---
 
 ## 🛠️ Technology Stack
 
 | Layer | Technologies |
-| :--- | :--- |
-| **Frontend** | React 19, Vite, Tailwind CSS, Lucide Icons, Chart.js, LocalStorage API |
-| **Mobile** | Capacitor (Android) |
-| **Backend** | FastAPI, Uvicorn, Python 3.12+ |
-| **ML/Analytics** | Scikit-Learn, Pandas, NumPy, Joblib |
-| **NLP** | spaCy (en_core_web_sm), PDFPlumber, RE |
-| **Frontend Hosting** | GitHub Pages |
-| **Backend Hosting** | Render (Web Service) |
-| **CI/CD** | GitHub Actions Pipeline (Automated testing & linting) |
-| **Export** | Browser Print-to-PDF Engine (Custom HTML Templates) |
+|:---|:---|
+| **Frontend** | React 19, Vite, Tailwind CSS, Framer Motion, React Router v6 |
+| **Backend** | FastAPI 0.110, Uvicorn, Python 3.12+, Pydantic v2 |
+| **ML/Analytics** | Scikit-Learn, Pandas, NumPy, Joblib, RandomForest |
+| **NLP** | spaCy (en_core_web_sm), sentence-transformers (BERT), PDFPlumber |
+| **Auth** | JWT (python-jose), bcrypt (passlib), SQLite |
+| **Frontend Hosting** | GitHub Pages (automated via CI/CD) |
+| **Backend Hosting** | Render Web Service |
+| **CI/CD** | GitHub Actions (auto-build + deploy on push to main) |
 
 ---
 
@@ -95,134 +85,184 @@ An AI-driven practice module tracking technical responses. (Note: Current versio
 
 ### Prerequisites
 - Node.js v18+
-- Python 3.11 or 3.12 (Recommended)
+- Python 3.11 or 3.12+
 - Git
 
-### 1. Automated Setup (Windows)
-Run the provided PowerShell script from the root directory:
+### ⚡ One-Command Setup (Windows)
 ```powershell
 .\start_app.ps1
 ```
 
-### 2. Manual Installation
+### Manual Installation
 
-**Backend Setup:**
+**Backend:**
 ```bash
 cd backend
 python -m venv .venv
-
-# Activate virtual environment (Windows)
-.\.venv\Scripts\activate
-# Activate virtual environment (Mac/Linux)
-# source .venv/bin/activate
+.\.venv\Scripts\activate        # Windows
+# source .venv/bin/activate     # Mac/Linux
 
 pip install -r requirements.txt
-python -m spacy download en_core_web_sm
-
-# Copy configuration template
-python -c "import shutil; shutil.copy('../.env.example', '.env')"
 uvicorn main:app --reload
+# API available at http://localhost:8000
+# Swagger docs at http://localhost:8000/docs
 ```
 
-**Frontend Setup:**
+**Frontend:**
 ```bash
 cd frontend
 npm install
 npm run dev
+# App available at http://localhost:5173
 ```
 
-**Android Mobile Build Setup:**
-```bash
-cd frontend
-npm install
-npx cap sync android
-# Build the release APK (Android Studio can also be opened via 'npx cap open android')
-cd android
-./gradlew assembleRelease
-```
+---
+
+## 📡 API Endpoints
+
+### Core Analysis
+| Method | Endpoint | Description |
+|:---|:---|:---|
+| `POST` | `/analyze` | Full CV analysis (PDF upload) |
+| `GET` | `/companies` | List supported companies |
+| `GET` | `/metrics` | ML model performance metrics |
+| `GET` | `/market-pulse` | Trending skills market data |
+| `POST` | `/evaluate-answer` | Interview answer evaluation |
+
+### Auth
+| Method | Endpoint | Description |
+|:---|:---|:---|
+| `POST` | `/auth/register` | User registration |
+| `POST` | `/auth/login` | User login (returns JWT) |
+
+### Feature Endpoints (New v3.0.0)
+| Method | Endpoint | Description |
+|:---|:---|:---|
+| `POST` | `/features/rewrite` | AI resume section rewriter |
+| `POST` | `/features/ats-score` | ATS compatibility score |
+| `POST` | `/features/jd-match` | Job description matcher |
+| `POST` | `/features/roadmap` | Career roadmap generator |
+| `POST` | `/features/github-stats` | GitHub developer intelligence |
+| `POST` | `/features/portfolio-analyze` | Multi-platform portfolio analyzer |
+| `POST` | `/features/interview/question` | Interview question generator |
+| `POST` | `/features/interview/evaluate` | Answer evaluator with feedback |
+| `POST` | `/features/recruiter/compare` | Candidate ranking/comparison |
+| `GET` | `/features/resume-builder/templates` | Resume template options |
+| `POST` | `/features/salary-predict` | Salary range predictor |
+| `GET` | `/features/explain-predictions` | Explainable AI factors |
+| `GET` | `/features/skill-gap-recommendations` | Skill gap + learning links |
+| `GET` | `/features/user-analytics` | User progress analytics |
+
+> Full interactive API docs: [tonycv-backend.onrender.com/docs](https://tonycv-backend.onrender.com/docs)
 
 ---
 
 ## ☁️ Production Deployment
 
-TonyCV uses a **split deployment** strategy — the frontend and backend are hosted on separate platforms for optimal performance and cost:
-
 | Layer | Platform | URL |
-| :--- | :--- | :--- |
+|:---|:---|:---|
 | **Frontend** | GitHub Pages | [prashant-singh-rawat.github.io/ML-Project-CV-Analysis](https://prashant-singh-rawat.github.io/ML-Project-CV-Analysis/) |
 | **Backend API** | Render (Web Service) | [tonycv-backend.onrender.com](https://tonycv-backend.onrender.com) |
 
----
-
-### Backend — Render Web Service (Python / FastAPI)
-
-| Property | Value |
-| :--- | :--- |
-| **Platform** | Render Web Service |
-| **Runtime** | Python 3.10 |
-| **Root Directory** | `backend/` |
-| **Build Command** | `pip install -r requirements.txt` |
-| **Start Command** | `uvicorn main:app --host 0.0.0.0 --port $PORT` |
-| **Config File** | `render.yaml` (root of repo) |
-| **Environment Vars** | `JWT_SECRET_KEY` (set in Render Dashboard) |
-
-**Deploy Backend to Render:**
+### Deploy Backend to Render
 1. Go to [Render Dashboard](https://dashboard.render.com) → **New → Blueprint**
 2. Connect your GitHub repository
-3. Render detects `render.yaml` and sets up the backend service automatically
-4. Set `JWT_SECRET_KEY` under the service → **Environment** tab
-5. Click **Apply** — the backend will build and deploy
+3. Render auto-detects `render.yaml` and sets up the service
+4. Set `JWT_SECRET_KEY` under **Environment** tab
+5. Click **Apply** — backend builds and deploys automatically
+
+### Deploy Frontend to GitHub Pages
+```bash
+cd frontend
+npm run build
+# GitHub Actions CI/CD automatically deploys dist/ to GitHub Pages on every push to main
+```
 
 ---
 
-### Frontend — GitHub Pages (React / Vite)
+## 📁 Project Structure
 
-| Property | Value |
-| :--- | :--- |
-| **Platform** | GitHub Pages |
-| **Build Output** | `frontend/dist/` |
-| **Live URL** | `https://prashant-singh-rawat.github.io/ML-Project-CV-Analysis/` |
-
-**Deploy Frontend to GitHub Pages:**
-```bash
-cd frontend
-npm install
-npm run build
-# The dist/ folder is then published via the gh-pages branch or GitHub Actions
 ```
-
-> The frontend communicates with the Render backend via the hardcoded API base URL (`https://tonycv-backend.onrender.com`) with a `localhost` fallback for local development.
+ML-Project-CV-Analysis/
+├── backend/
+│   ├── main.py                    # FastAPI app entry point
+│   ├── requirements.txt
+│   ├── routes/
+│   │   ├── __init__.py
+│   │   └── features.py            # 14 new feature endpoints (v3.0.0)
+│   ├── auth/
+│   │   ├── auth_routes.py         # JWT auth endpoints
+│   │   ├── auth_utils.py
+│   │   └── user_db.py
+│   ├── ml_pipeline/
+│   │   ├── model_manager.py       # RandomForest trainer + predictor
+│   │   ├── semantic_matcher.py    # BERT semantic skill matching
+│   │   ├── synthetic_data.py
+│   │   └── model.pkl
+│   └── utils/
+│       └── cv_parser.py           # spaCy PDF parser
+├── frontend/
+│   ├── src/
+│   │   ├── App.jsx                # Router + Nav (updated v3.0.0)
+│   │   ├── pages/
+│   │   │   ├── Home.jsx
+│   │   │   ├── Analyze.jsx
+│   │   │   ├── ResumeRewritePage.jsx   # NEW
+│   │   │   ├── AtsScorePage.jsx        # NEW
+│   │   │   ├── JdMatchPage.jsx         # NEW
+│   │   │   ├── CareerRoadmapPage.jsx   # NEW
+│   │   │   ├── InterviewSimulatorPage.jsx # NEW
+│   │   │   ├── SalaryPredictPage.jsx   # NEW
+│   │   │   ├── SkillGapPage.jsx        # NEW
+│   │   │   └── PortfolioAnalyzerPage.jsx # NEW
+│   │   └── components/
+│   │       ├── Dashboard.jsx
+│   │       ├── BiometricInterview.jsx
+│   │       └── RegisterPopup.jsx
+│   └── package.json
+├── .github/
+│   └── workflows/
+│       └── ci.yml                 # CI/CD: build + deploy to GitHub Pages
+├── render.yaml                    # Render backend deployment config
+└── README.md
+```
 
 ---
 
 ## 🤝 Contributing
-
-We welcome contributions from the community! Here's how you can help make TonyCV better:
-
-### How to Contribute
-
-1. **Fork the repository**
-   - Click the "Fork" button on the top right of the repository page.
-
-2. **Clone your fork**
-   ```bash
-   git clone https://github.com/your-username/ML-Project-CV-Analysis.git
-   cd ML-Project-CV-Analysis
-   
-## 📈 Future Roadmap
-- **Live GitHub API Integration**: Real-time repository sentiment analysis.
-- **Generative AI Feedback**: Integration with LLMs for personalized interview coaching.
-- **Web3 Credential Issuance**: Real-world NFT/SBT minting of verified skill reports.
-
----
-
-## 🤝 Community & Contributing
-We welcome contributions! Please check our GitHub Issues tab for requested features and bug fixes. Before participating, please read our [Code of Conduct](CODE_OF_CONDUCT.md) to ensure a welcoming environment for everyone.
+We welcome contributions! Check our [GitHub Issues](https://github.com/Prashant-Singh-Rawat/ML-Project-CV-Analysis/issues) tab for requested features and bug reports. Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
 
 ---
 
 ## 📜 License
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ---
-*Developed with ❤️ for the future of AI-driven recruitment by [Prashant Singh Rawat](https://github.com/Prashant-Singh-Rawat).*
+
+## 📈 Changelog
+
+### v3.0.0 — June 2026
+- ✨ 14 new AI-powered feature endpoints
+- 🎨 8 new premium frontend pages
+- 🗺️ Career roadmap generator
+- 🎤 AI interview simulator with multi-stage support
+- 💰 Salary prediction engine
+- 🐙 GitHub developer intelligence scoring
+- 📊 ATS compatibility scoring with breakdown
+- 🎯 Job description semantic matcher
+- 📈 Skill gap analysis + curated learning links
+- 🌐 Portfolio analyzer (multi-platform)
+
+### v2.0.0 — May 2026
+- BERT semantic skill matching
+- JWT authentication system
+- Biometric interview simulator
+- Resume builder with templates
+
+### v1.0.0 — April 2026
+- Initial release: CV analysis + placement prediction
+- RandomForest ML pipeline
+- spaCy NLP parser
+
+---
+*Developed with ❤️ by [Prashant Singh Rawat](https://github.com/Prashant-Singh-Rawat)*
