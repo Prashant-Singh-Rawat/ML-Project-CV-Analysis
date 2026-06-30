@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import InputForm from '../components/InputForm';
 import {
@@ -397,7 +397,7 @@ export default function Analyze() {
 
   // Fetch companies
   useEffect(() => {
-    axios.get(`${API_BASE_URL}/companies`).then(r => setCompanies(r.data?.companies || FALLBACK_COMPANIES)).catch(() => {});
+    api.get(`/companies`).then(r => setCompanies(r.data?.companies || FALLBACK_COMPANIES)).catch(() => {});
   }, []);
 
   // Handle analyze (upload path)
@@ -405,7 +405,7 @@ export default function Analyze() {
     setIsLoading(true);
     setError('');
     try {
-      const res = await axios.post(`${API_BASE_URL}/analyze`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const res = await api.post(`/analyze`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       navigate('/dashboard', { state: { analysisData: res.data } });
     } catch (err) {
       setError(err?.response?.data?.detail || 'Analysis failed. Please try again.');

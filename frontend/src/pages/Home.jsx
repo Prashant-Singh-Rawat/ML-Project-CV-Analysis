@@ -380,7 +380,7 @@ export default function Home() {
   const [selectedOption, setSelectedOption] = useState(null);
 
   useEffect(() => {
-    axios.get(`${API_BASE_URL}/companies`).then(r => setCompanies(r.data?.companies || FALLBACK_COMPANIES)).catch(() => {});
+    api.get(`/companies`).then(r => setCompanies(r.data?.companies || FALLBACK_COMPANIES)).catch(() => {});
   }, []);
 
   const toggleFaq = (index) => {
@@ -392,7 +392,7 @@ export default function Home() {
     setIsLoading(true);
     setError('');
     try {
-      const res = await axios.post(`${API_BASE_URL}/analyze`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const res = await api.post(`/analyze`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       navigate('/dashboard', { state: { analysisData: res.data } });
     } catch (err) {
       setError(err?.response?.data?.detail || 'Analysis failed. Please try again.');

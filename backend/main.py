@@ -4,7 +4,11 @@ from pydantic import BaseModel
 from typing import List, Optional
 import re
 import random
-import logging
+import asyncio
+from fastapi.responses import JSONResponse
+
+from utils.logger import logger
+from utils.middleware import RequestIDMiddleware, TimingMiddleware
 
 from utils.cv_parser import parse_cv_text, extract_text_from_pdf
 from ml_pipeline.model_manager import ModelManager
@@ -24,6 +28,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Setup SRE Observability Middleware
+app.add_middleware(TimingMiddleware)
+app.add_middleware(RequestIDMiddleware)
+
+# Global Exception Handler
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    logger.error("Unhandled Exception", extra={"endpoint": request.url.path, "error": str(exc)}, exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An unexpected error occurred. Our team has been notified. Please try again later."},
+    )
 
 # Include auth router
 app.include_router(auth_router)
@@ -169,12 +186,14 @@ class AnalysisResponse(BaseModel):
 
 @app.on_event("startup")
 async def startup_event():
+    logger.info("Application starting up...")
     # Initialize auth database
     auth_db.init_db()
     # Attempt to load or train models on startup
     if not model_manager.load_models():
-        print("Models not found. Training on startup...")
+        logger.info("Models not found. Training on startup...")
         model_manager.train_models()
+    logger.info("Startup complete.")
 
 @app.get("/companies")
 async def get_companies():
@@ -212,8 +231,13 @@ async def analyze_cv(
         
     try:
         file_bytes = await cv_file.read()
-        cv_text = extract_text_from_pdf(file_bytes)
+        # Parse PDF with a 15-second timeout to prevent indefinite hanging
+        cv_text = await asyncio.wait_for(asyncio.to_thread(extract_text_from_pdf, file_bytes), timeout=15.0)
+    except asyncio.TimeoutError:
+        logger.error("PDF Parsing Timeout", extra={"filename": cv_file.filename})
+        raise HTTPException(status_code=408, detail="Resume parsing timed out. The file might be too large or complex.")
     except Exception as e:
+        logger.error("PDF Parsing Error", extra={"error": str(e), "filename": cv_file.filename})
         raise HTTPException(status_code=500, detail=f"Failed to read PDF: {str(e)}")
 
     if not cv_text.strip():
@@ -263,15 +287,26 @@ async def analyze_cv(
     if cgpa < 0 or cgpa > 10:
         cgpa = 8.0
         
-    # 3. Model Prediction — crash-proof: always returns a valid result
+    # 3. Model Prediction — crash-proof: always returns a valid result with a 15s timeout
     try:
-        prediction = model_manager.predict(
+        prediction = await asyncio.wait_for(asyncio.to_thread(model_manager.predict, 
             candidate_cgpa=cgpa,
             target_company=target_company,
             candidate_skills=candidate_skills
-        )
+        ), timeout=15.0)
+    except asyncio.TimeoutError:
+        logger.error("[SAFE] ML Inference timed out, using fallback")
+        _smp = min(100.0, len(candidate_skills) * 10.0)
+        prediction = {
+            "placement_probability": round(min(85.0, cgpa * 8 + _smp * 0.3), 2),
+            "placement_status": "Medium Chance",
+            "skill_match_pct": _smp,
+            "matched_skills": candidate_skills[:3],
+            "missing_skills": [],
+            "match_details": [],
+        }
     except Exception as e:
-        logging.getLogger(__name__).error(f"[SAFE] Prediction failed, using fallback: {e}")
+        logger.error(f"[SAFE] Prediction failed, using fallback: {e}", exc_info=True)
         _smp = min(100.0, len(candidate_skills) * 10.0)
         prediction = {
             "placement_probability": round(min(85.0, cgpa * 8 + _smp * 0.3), 2),

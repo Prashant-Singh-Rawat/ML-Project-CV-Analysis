@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiSearch, FiCpu, FiMenu, FiX, FiChevronDown } from 'react-icons/fi';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Pages
 import Home from './pages/Home';
@@ -278,6 +280,18 @@ function App() {
   return (
     <Router>
       <ScrollToTop />
+      {/* Global Toast Notifications (Errors, Warnings, Successes) */}
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       {/* Animated Background */}
       <div className="bg-animated" />
 

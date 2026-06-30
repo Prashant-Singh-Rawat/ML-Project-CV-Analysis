@@ -1,5 +1,9 @@
 import React from 'react';
 
+/**
+ * ErrorBoundary: Catches unhandled React render errors and shows
+ * a friendly fallback instead of a blank / crashed screen.
+ */
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -11,58 +15,57 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
-    console.error('App Error:', error, info);
+    console.error('[ErrorBoundary] Unhandled UI Error:', error, info.componentStack);
   }
+
+  handleRetry = () => {
+    this.setState({ hasError: false, error: null });
+  };
 
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontFamily: 'Inter, sans-serif',
-          background: '#f1f5f9',
-          padding: '2rem'
-        }}>
-          <div style={{
-            background: 'white',
-            borderRadius: '16px',
-            padding: '2.5rem',
-            maxWidth: '500px',
-            width: '100%',
+        <div
+          style={{
+            minHeight: '300px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '2rem',
             textAlign: 'center',
-            boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
-            border: '1px solid #e2e8f0'
-          }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
-            <h2 style={{ color: '#1e293b', fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.5rem' }}>
-              Something went wrong
-            </h2>
-            <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-              {this.state.error?.message || 'An unexpected error occurred'}
-            </p>
-            <button
-              onClick={() => window.location.reload()}
-              style={{
-                background: '#2563eb',
-                color: 'white',
-                border: 'none',
-                borderRadius: '10px',
-                padding: '0.75rem 2rem',
-                fontWeight: 700,
-                fontSize: '0.9rem',
-                cursor: 'pointer'
-              }}
-            >
-              Reload Page
-            </button>
-          </div>
+            background: '#f8fafc',
+            borderRadius: '16px',
+            margin: '2rem auto',
+            maxWidth: '480px',
+          }}
+        >
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.5rem' }}>
+            Something went wrong
+          </h2>
+          <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+            {this.state.error?.message || 'An unexpected error occurred. Please try again.'}
+          </p>
+          <button
+            onClick={this.handleRetry}
+            style={{
+              background: '#2563eb',
+              color: 'white',
+              border: 'none',
+              borderRadius: '9999px',
+              padding: '0.625rem 1.5rem',
+              fontSize: '0.875rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Try Again
+          </button>
         </div>
       );
     }
+
     return this.props.children;
   }
 }
