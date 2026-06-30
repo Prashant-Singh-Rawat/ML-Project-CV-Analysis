@@ -7,11 +7,13 @@ services:
     buildCommand: |
       pip install --upgrade pip
       pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1 --timeout-keep-alive 120
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.0
       - key: JWT_SECRET_KEY
         generateValue: true
-    healthCheckPath: /docs
+      - key: PYTHONUNBUFFERED
+        value: "1"
+    healthCheckPath: /health
     autoDeploy: true

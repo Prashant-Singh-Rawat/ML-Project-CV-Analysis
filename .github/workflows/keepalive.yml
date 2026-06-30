@@ -1,0 +1,22 @@
+name: Backend Keepalive Ping
+
+on:
+  schedule:
+    # Ping every 10 minutes to prevent Render free tier from sleeping
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Backend Health Check
+        run: |
+          echo "🏓 Pinging TonyCV backend to prevent cold start..."
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 https://tonycv-backend.onrender.com/health)
+          echo "Health check response: $RESPONSE"
+          if [ "$RESPONSE" = "200" ]; then
+            echo "✅ Backend is healthy"
+          else
+            echo "⚠️ Backend returned $RESPONSE — it may be waking up (this is normal)"
+          fi

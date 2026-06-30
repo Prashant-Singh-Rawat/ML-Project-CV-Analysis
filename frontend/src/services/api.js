@@ -2,48 +2,81 @@ import axios from 'axios';
 import axiosRetry from 'axios-retry';
 import { toast } from 'react-toastify';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://tonycv-backend.onrender.com';
+
+// Track if we've already shown the "waking up" toast to avoid spam
+let wakingUpToastId = null;
 
 // Create a centralized Axios instance
+// Timeout is 90s to accommodate Render free-tier cold starts (can take 60s)
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000, // 30 second global timeout
+  timeout: 90000, // 90 seconds — covers full Render cold start
 });
 
-// Configure automatic retries for transient failures
+// Auto-retry with exponential backoff: 3 retries, 1s → 2s → 4s delay
 axiosRetry(api, {
-  retries: 3, // Retry up to 3 times
-  retryDelay: (retryCount) => {
-    return retryCount * 1000; // Exponential-like backoff: 1s, 2s, 3s
-  },
+  retries: 3,
+  retryDelay: axiosRetry.exponentialDelay,
   retryCondition: (error) => {
-    // Retry on network errors or 5xx status codes
-    return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.response?.status >= 500;
-  }
+    // Retry on network errors OR server errors (5xx) OR timeouts
+    return (
+      axiosRetry.isNetworkOrIdempotentRequestError(error) ||
+      error.response?.status >= 500 ||
+      error.code === 'ECONNABORTED'
+    );
+  },
+  onRetry: (retryCount) => {
+    if (retryCount === 1 && !wakingUpToastId) {
+      // Show friendly "waking up" message on first retry
+      wakingUpToastId = toast.info(
+        '⏳ Server is waking up... This may take up to 60 seconds on first load.',
+        { autoClose: 60000, toastId: 'waking-up' }
+      );
+    }
+  },
 });
 
-// Add a response interceptor to handle errors globally
+// Response interceptor for global error handling
 api.interceptors.response.use(
   (response) => {
+    // Dismiss the "waking up" toast on successful response
+    if (wakingUpToastId) {
+      toast.dismiss('waking-up');
+      wakingUpToastId = null;
+    }
     return response;
   },
   (error) => {
-    if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
-      toast.error('The request timed out. Please try again.');
+    // Dismiss the "waking up" toast
+    if (wakingUpToastId) {
+      toast.dismiss('waking-up');
+      wakingUpToastId = null;
+    }
+
+    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      toast.error(
+        '⏰ Request timed out. The server may be starting up — please try again in 30 seconds.',
+        { autoClose: 8000 }
+      );
     } else if (!error.response) {
-      toast.error('Network Error: The server appears to be offline.');
+      toast.error(
+        '📡 Cannot connect to the server. Check your internet connection.',
+        { autoClose: 6000 }
+      );
     } else {
       const status = error.response.status;
       const detail = error.response.data?.detail || error.message;
-      
-      if (status >= 500) {
-        toast.error(`Server Error (${status}): ${detail}`);
+
+      if (status === 408) {
+        toast.error(`⏰ ${detail}`, { autoClose: 6000 });
       } else if (status === 429) {
-        toast.error('Rate Limit Exceeded. Please slow down.');
+        toast.warning('🚦 Too many requests. Please wait a moment before trying again.');
+      } else if (status >= 500) {
+        toast.error(`🔧 Server Error: ${detail}`);
       }
     }
-    
-    // Return a Promise rejection to allow local components to handle specific cases
+
     return Promise.reject(error);
   }
 );

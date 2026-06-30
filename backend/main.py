@@ -195,6 +195,16 @@ async def startup_event():
         model_manager.train_models()
     logger.info("Startup complete.")
 
+@app.get("/health")
+async def health_check():
+    """
+    Lightweight health check endpoint.
+    Returns 200 immediately — does NOT load ML models.
+    Used by: Render health checks, GitHub Actions keepalive ping.
+    """
+    return {"status": "ok", "service": "TonyCV API", "version": "3.0.0"}
+
+
 @app.get("/companies")
 async def get_companies():
     """Returns the list of supported companies"""
