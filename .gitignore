@@ -29,3 +29,5 @@ backend/ml_pipeline/models/*.joblib
 backend/ml_pipeline/models/*.pkl
 frontend/.dist/
 **/dist/
+
+# YOLO Badge Trigger
