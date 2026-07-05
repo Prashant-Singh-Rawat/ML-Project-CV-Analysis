@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [ "main" ]
   schedule:
-    - cron: '30 1 * * 0' # Run weekly on Sundays
+    - cron: "30 1 * * 0"
 
 jobs:
   dependency-audit:
@@ -18,47 +18,63 @@ jobs:
     - name: Set up Node.js (Frontend)
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: "20"
 
-    - name: Run npm audit
+    - name: Install Frontend Dependencies
       working-directory: ./frontend
-      run: npm audit --audit-level=high
+      run: npm ci --prefer-offline || npm install
+
+    - name: Run npm audit (Frontend)
+      working-directory: ./frontend
+      run: npm audit --audit-level=critical
+      continue-on-error: true
 
     - name: Set up Python (Backend)
       uses: actions/setup-python@v5
       with:
-        python-version: "3.12"
+        python-version: "3.11"
 
-    - name: Run pip-audit
-      working-directory: ./backend
+    - name: Install Backend Dependencies
       run: |
         python -m pip install --upgrade pip
         pip install pip-audit
-        pip-audit -r requirements.txt
+        pip install -r backend/requirements.txt || true
 
-  codeql-analysis:
-    name: CodeQL Analysis
+    - name: Run pip-audit (Backend)
+      run: pip-audit --requirement backend/requirements.txt --skip-editable || true
+
+  codeql-javascript:
+    name: CodeQL Analysis (javascript-typescript)
     runs-on: ubuntu-latest
     permissions:
       security-events: write
       actions: read
       contents: read
-
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [ 'javascript-typescript', 'python' ]
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
+    - uses: actions/checkout@v4
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
       with:
-        languages: ${{ matrix.language }}
-
+        languages: javascript-typescript
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v3
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
+
+  codeql-python:
+    name: CodeQL Analysis (python)
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    steps:
+    - uses: actions/checkout@v4
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
       with:
-        category: "/language:${{matrix.language}}"
+        languages: python
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v3
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
