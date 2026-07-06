@@ -1,5 +1,5 @@
-from fastapi import APIRouter, HTTPException, Header, Depends
-from pydantic import BaseModel, EmailStr
+from fastapi import APIRouter, HTTPException, Header
+from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 from . import user_db, auth_utils
@@ -9,6 +9,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 # ── Request / Response Models ─────────────────────────────────────────────────
 
+
 class RegisterRequest(BaseModel):
     email: str
     name: str
@@ -17,17 +18,20 @@ class RegisterRequest(BaseModel):
     phone: Optional[str] = None
     updates_enabled: Optional[bool] = True
 
+
 class LoginRequest(BaseModel):
     email: str
     password: str
     device_fingerprint: str
 
+
 class GoogleAuthRequest(BaseModel):
-    google_id_token: str       # JWT token from Google Identity Services
+    google_id_token: str  # JWT token from Google Identity Services
     name: str
     email: str
     google_id: str
     device_fingerprint: str
+
 
 class UserResponse(BaseModel):
     id: int
@@ -35,6 +39,7 @@ class UserResponse(BaseModel):
     name: str
     phone: Optional[str] = None
     updates_enabled: Optional[bool] = True
+
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -44,43 +49,51 @@ class TokenResponse(BaseModel):
 
 # ── Helper ────────────────────────────────────────────────────────────────────
 
+
 def _check_account_lock(user: dict, email: str):
     """Raise 423 if account is locked, cleanup if lock expired."""
     if user.get("locked_until"):
         locked_until = datetime.fromisoformat(user["locked_until"])
         if datetime.utcnow() < locked_until:
-            remaining_mins = int((locked_until - datetime.utcnow()).total_seconds() / 60) + 1
+            remaining_mins = (
+                int((locked_until - datetime.utcnow()).total_seconds() / 60) + 1
+            )
             raise HTTPException(
                 status_code=423,
                 detail=f"🔒 Account temporarily locked after too many failed attempts. "
-                       f"Try again in {remaining_mins} minute(s)."
+                f"Try again in {remaining_mins} minute(s).",
             )
         else:
             user_db.reset_failed_attempts(email)  # lock expired — reset
 
 
 def _build_token_response(user: dict, device_fingerprint: str) -> dict:
-    token = auth_utils.create_access_token({
-        "sub": user["email"],
-        "device": device_fingerprint,
-        "name": user["name"],
-    })
+    token = auth_utils.create_access_token(
+        {
+            "sub": user["email"],
+            "device": device_fingerprint,
+            "name": user["name"],
+        }
+    )
     return {
         "access_token": token,
         "token_type": "bearer",
         "user": {
-            "id": user["id"], 
-            "email": user["email"], 
+            "id": user["id"],
+            "email": user["email"],
             "name": user["name"],
             "phone": user.get("phone"),
-            "updates_enabled": bool(user.get("updates_enabled", 1))
-        }
+            "updates_enabled": bool(user.get("updates_enabled", 1)),
+        },
     }
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
-@router.post("/register", response_model=TokenResponse, summary="Register a new account")
+
+@router.post(
+    "/register", response_model=TokenResponse, summary="Register a new account"
+)
 async def register(req: RegisterRequest):
     # 1. Validate password strength
     is_strong, msg = auth_utils.validate_password_strength(req.password)
@@ -94,11 +107,10 @@ async def register(req: RegisterRequest):
         if existing["device_fingerprint"] == req.device_fingerprint:
             raise HTTPException(
                 status_code=409,
-                detail="An account with this email already exists. Please log in instead."
+                detail="An account with this email already exists. Please log in instead.",
             )
         raise HTTPException(
-            status_code=409,
-            detail="An account with this email already exists."
+            status_code=409, detail="An account with this email already exists."
         )
 
     # 3. Hash password and store user
@@ -109,11 +121,13 @@ async def register(req: RegisterRequest):
         hashed_password=hashed,
         device_fingerprint=req.device_fingerprint,
         phone=req.phone,
-        updates_enabled=1 if req.updates_enabled else 0
+        updates_enabled=1 if req.updates_enabled else 0,
     )
 
     if not user:
-        raise HTTPException(status_code=500, detail="Failed to create account. Please try again.")
+        raise HTTPException(
+            status_code=500, detail="Failed to create account. Please try again."
+        )
 
     return _build_token_response(user, req.device_fingerprint)
 
@@ -123,13 +137,17 @@ class UpdateSettingsRequest(BaseModel):
     phone: Optional[str] = None
     updates_enabled: bool
 
-@router.post("/update-settings", summary="Update user email, phone, and notification subscription")
+
+@router.post(
+    "/update-settings",
+    summary="Update user email, phone, and notification subscription",
+)
 async def update_settings(req: UpdateSettingsRequest):
     conn = user_db.get_connection()
     c = conn.cursor()
     c.execute(
-        'UPDATE users SET phone = ?, updates_enabled = ? WHERE email = ?',
-        (req.phone, 1 if req.updates_enabled else 0, req.email)
+        "UPDATE users SET phone = ?, updates_enabled = ? WHERE email = ?",
+        (req.phone, 1 if req.updates_enabled else 0, req.email),
     )
     conn.commit()
     conn.close()
@@ -143,12 +161,14 @@ async def update_settings(req: UpdateSettingsRequest):
             "email": updated["email"],
             "name": updated["name"],
             "phone": updated.get("phone"),
-            "updates_enabled": bool(updated.get("updates_enabled", 1))
-        }
+            "updates_enabled": bool(updated.get("updates_enabled", 1)),
+        },
     }
 
 
-@router.post("/login", response_model=TokenResponse, summary="Login with email + password")
+@router.post(
+    "/login", response_model=TokenResponse, summary="Login with email + password"
+)
 async def login(req: LoginRequest):
     # 1. Lookup user
     user = user_db.get_user_by_email(req.email)
@@ -159,12 +179,14 @@ async def login(req: LoginRequest):
     _check_account_lock(user, req.email)
 
     # 3. Verify password
-    if not user.get("hashed_password") or not auth_utils.verify_password(req.password, user["hashed_password"]):
+    if not user.get("hashed_password") or not auth_utils.verify_password(
+        req.password, user["hashed_password"]
+    ):
         user_db.increment_failed_attempts(req.email)
         attempts_left = max(0, 5 - (user.get("failed_attempts", 0) + 1))
         raise HTTPException(
             status_code=401,
-            detail=f"Invalid email or password. {attempts_left} attempt(s) remaining before lockout."
+            detail=f"Invalid email or password. {attempts_left} attempt(s) remaining before lockout.",
         )
 
     # 4. Single-device enforcement
@@ -172,8 +194,8 @@ async def login(req: LoginRequest):
         raise HTTPException(
             status_code=403,
             detail="🔒 Security Alert: This account is registered on a different device. "
-                   "Access is only allowed from the original device for security. "
-                   "Contact support if you have changed your device."
+            "Access is only allowed from the original device for security. "
+            "Contact support if you have changed your device.",
         )
 
     # 5. Success
@@ -181,11 +203,13 @@ async def login(req: LoginRequest):
     return _build_token_response(user, req.device_fingerprint)
 
 
-@router.post("/google", response_model=TokenResponse, summary="Login / Register with Google")
+@router.post(
+    "/google", response_model=TokenResponse, summary="Login / Register with Google"
+)
 async def google_auth(req: GoogleAuthRequest):
     """
     Accepts the Google ID token from the Google Identity Services library.
-    In production, verify the token with google-auth-library. 
+    In production, verify the token with google-auth-library.
     For now we trust the sub (google_id) as identifier.
     """
     # Check by google_id first
@@ -197,7 +221,7 @@ async def google_auth(req: GoogleAuthRequest):
             raise HTTPException(
                 status_code=403,
                 detail="🔒 Security Alert: This Google account is registered on a different device. "
-                       "Access denied."
+                "Access denied.",
             )
         user_db.update_last_login(user["email"])
         return _build_token_response(user, req.device_fingerprint)
@@ -207,7 +231,7 @@ async def google_auth(req: GoogleAuthRequest):
     if existing_by_email:
         raise HTTPException(
             status_code=409,
-            detail="This email is already registered with a password account. Please log in with email/password."
+            detail="This email is already registered with a password account. Please log in with email/password.",
         )
 
     # Create new account (no password for Google users)
@@ -216,7 +240,7 @@ async def google_auth(req: GoogleAuthRequest):
         name=req.name,
         hashed_password=None,
         device_fingerprint=req.device_fingerprint,
-        google_id=req.google_id
+        google_id=req.google_id,
     )
 
     if not user:
@@ -234,7 +258,9 @@ async def get_me(authorization: str = Header(None)):
     payload = auth_utils.verify_token(token)
 
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token. Please log in again.")
+        raise HTTPException(
+            status_code=401, detail="Invalid or expired token. Please log in again."
+        )
 
     user = user_db.get_user_by_email(payload["sub"])
     if not user:

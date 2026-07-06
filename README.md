@@ -13,6 +13,11 @@
 
 🌐 **Live App**: [prashant-singh-rawat.github.io/ML-Project-CV-Analysis](https://prashant-singh-rawat.github.io/ML-Project-CV-Analysis/)
 🔗 **API Backend**: [tonycv-backend.onrender.com](https://tonycv-backend.onrender.com)
+🏠 **Local Frontend**: [http://localhost:5173](http://localhost:5173)
+🏠 **Local Backend**: [http://localhost:8000](http://localhost:8000)
+
+> **⚠️ IMPORTANT FOR CONTRIBUTORS:**
+> Please **test all your changes on localhost first**. Do not directly modify the files connected to the production deployments (Render or Vercel) without local verification. Always run the app locally and ensure everything works before pushing your changes.
 
 ---
 
@@ -82,6 +87,10 @@
 ---
 
 ## 🚀 Local Development Setup
+
+> **⚠️ CRITICAL RULE FOR CONTRIBUTORS:** 
+> From now on, when making changes, **you MUST use the localhost environment** (`http://localhost:5173` for frontend and `http://localhost:8000` for backend). 
+> **DO NOT** modify the files to point to or test against the production Render backend or the live GitHub Pages frontend. Ensure your local environment variables (like in `.env`) point to `localhost` and test everything locally before submitting any changes.
 
 ### Prerequisites
 - Node.js v18+

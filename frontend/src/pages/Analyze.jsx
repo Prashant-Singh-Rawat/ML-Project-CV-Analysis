@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import InputForm from '../components/InputForm';
 import {
   FiUploadCloud, FiEdit3, FiArrowRight, FiArrowLeft, FiX,
@@ -414,7 +414,7 @@ export default function Analyze() {
       const blob = await html2pdf().set({ margin: 0, filename: 'resume.pdf', image: { type: 'jpeg', quality: 0.98 }, jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } }).from(el).outputPdf('blob');
       const file = new File([blob], 'resume.pdf', { type: 'application/pdf' });
       const fd = new FormData();
-      fd.append('file', file);
+      fd.append('cv_file', file);
       fd.append('target_company', companies[0] || 'Google');
       fd.append('job_description', '');
       const res = await api.post(`/analyze`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });

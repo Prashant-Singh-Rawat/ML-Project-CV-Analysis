@@ -2,16 +2,16 @@ import axios from 'axios';
 import axiosRetry from 'axios-retry';
 import { toast } from 'react-toastify';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://tonycv-backend.onrender.com';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // Track if we've already shown the "waking up" toast to avoid spam
 let wakingUpToastId = null;
 
 // Create a centralized Axios instance
-// Timeout is 90s to accommodate Render free-tier cold starts (can take 60s)
+// Timeout is 30s for local dev. Set to 90s for production (Render cold start).
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 90000, // 90 seconds — covers full Render cold start
+  timeout: 30000, // 30 seconds for local dev
 });
 
 // Auto-retry with exponential backoff: 3 retries, 1s → 2s → 4s delay
