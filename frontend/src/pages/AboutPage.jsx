@@ -4,10 +4,7 @@ import { motion } from 'framer-motion';
 import {
   FiCpu, FiArrowRight, FiUsers, FiStar, FiZap,
   FiShield, FiGlobe, FiTarget, FiTrendingUp, FiHeart
-
-} 
-
-from 'react-icons/fi';
+} from 'react-icons/fi';
 
 const STATS = [
   { num: '2.4M+', label: 'Resumes Analysed' },
