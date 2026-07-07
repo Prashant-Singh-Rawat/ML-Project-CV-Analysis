@@ -1,6 +1,7 @@
+import { AnimatePresence, motion } from 'framer-motion';
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
+
 import {
   FiFileText, FiArrowRight, FiDownload, FiEdit3, FiCheck,
   FiStar, FiLayout, FiZap, FiEye, FiGrid, FiList,

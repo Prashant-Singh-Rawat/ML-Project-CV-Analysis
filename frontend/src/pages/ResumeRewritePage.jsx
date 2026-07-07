@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { AnimatePresence } from 'framer-motion';
-
+import { AnimatePresence, motion } from 'framer-motion';
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const SECTIONS = ['Summary', 'Experience', 'Projects', 'Skills', 'Achievements'];
