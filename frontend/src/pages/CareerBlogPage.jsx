@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { FiArrowRight, FiClock, FiTag, FiTrendingUp, FiSearch } from 'react-icons/fi';
 
 const CATEGORIES = ['All', 'Resume Tips', 'Job Search', 'ATS Guide', 'Career Growth', 'Interview Prep'];

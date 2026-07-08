@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   FiCpu, FiArrowRight, FiUsers, FiStar, FiZap,
   FiShield, FiGlobe, FiTarget, FiTrendingUp, FiHeart
