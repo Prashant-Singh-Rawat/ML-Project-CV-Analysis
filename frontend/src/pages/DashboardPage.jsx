@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { motion } from 'framer-motion';
 import Dashboard from '../components/Dashboard';
 
 

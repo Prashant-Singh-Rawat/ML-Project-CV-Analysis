@@ -1,5 +1,6 @@
 import React, { useEffect, useCallback } from 'react';
 import { FiX, FiArrowRight, FiExternalLink, FiCheck, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { AnimatePresence, motion } from 'framer-motion';
 
 /**
  * TemplateGalleryModal — reusable lightbox/modal for template previews.
