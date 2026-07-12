@@ -61,6 +61,29 @@ app.include_router(features_router)
 model_manager = ModelManager()
 
 
+# ── Health / Liveness Endpoint ─────────────────────────────────────────────
+# Required by render.yaml (healthCheckPath: /health) and the keepalive workflow.
+@app.get("/health", tags=["Health"])
+async def health_check():
+    """Lightweight liveness probe for Render and the GitHub Actions keepalive cron."""
+    return {
+        "status": "ok",
+        "service": "TonyCV API",
+        "version": app.version,
+    }
+
+
+@app.get("/", tags=["Health"])
+async def root():
+    """Root redirect — keeps the service warm and provides a discovery link."""
+    return {
+        "message": "Welcome to TonyCV API",
+        "docs": "/docs",
+        "health": "/health",
+    }
+
+
+
 class AnalysisRequest(BaseModel):
     cv_text: str
     cgpa: float
