@@ -97,10 +97,14 @@
 - Python 3.11 or 3.12+
 - Git
 
-### ⚡ One-Command Setup (Windows)
-```powershell
-.\start_app.ps1
-```
+### ⚡ Quick Start (Windows)
+We provide easy-to-use batch scripts to manage the local development servers:
+
+- **Start Servers**: Double-click **`start_servers.bat`** (Leaves a terminal window open).
+- **Stop Servers**: Simply close the terminal window, OR double-click **`stop_app.bat`**.
+- **Background Mode**: Double-click `start_hidden.vbs` to run silently in the background.
+
+*(The `setup_autostart.ps1` script can also be run to automatically launch the project on Windows boot).*
 
 ### Manual Installation
 

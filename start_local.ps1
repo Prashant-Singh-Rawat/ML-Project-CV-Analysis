@@ -24,7 +24,11 @@ if (-not (Test-Path $VenvPath)) {
 
 # Install backend deps quietly
 Write-Host "  Installing backend dependencies..." -ForegroundColor Gray
-& pip install -r (Join-Path $BackendPath "requirements.txt") -q
+$PipPath = Join-Path $VenvPath "Scripts\pip.exe"
+if (-not (Test-Path $PipPath)) {
+    $PipPath = "pip" # fallback
+}
+& $PipPath install -r (Join-Path $BackendPath "requirements.txt") -q
 
 Write-Host "  Launching FastAPI on http://localhost:8000 ..." -ForegroundColor Green
 
