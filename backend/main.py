@@ -15,10 +15,12 @@ from ml_pipeline.model_manager import ModelManager
 from ml_pipeline.synthetic_data import COMPANIES
 
 # Auth
+from auth import resume_history_db
 from auth import user_db as auth_db
 from auth.auth_routes import router as auth_router
 
 from routes.features import router as features_router
+from routes.resume_history import router as resume_history_router
 
 app = FastAPI(title="TonyCV API", version="2.0.0")
 
@@ -56,9 +58,33 @@ async def global_exception_handler(request, exc):
 app.include_router(auth_router)
 
 app.include_router(features_router)
+app.include_router(resume_history_router)
 
 # Initialize Model Manager
 model_manager = ModelManager()
+
+
+# ── Health / Liveness Endpoint ─────────────────────────────────────────────
+# Required by render.yaml (healthCheckPath: /health) and the keepalive workflow.
+@app.get("/health", tags=["Health"])
+async def health_check():
+    """Lightweight liveness probe for Render and the GitHub Actions keepalive cron."""
+    return {
+        "status": "ok",
+        "service": "TonyCV API",
+        "version": app.version,
+    }
+
+
+@app.get("/", tags=["Health"])
+async def root():
+    """Root redirect — keeps the service warm and provides a discovery link."""
+    return {
+        "message": "Welcome to TonyCV API",
+        "docs": "/docs",
+        "health": "/health",
+    }
+
 
 
 class AnalysisRequest(BaseModel):
@@ -267,6 +293,7 @@ async def startup_event():
     logger.info("Application starting up...")
     # Initialize auth database
     auth_db.init_db()
+    resume_history_db.init_db()
     # Attempt to load or train models on startup
     if not model_manager.load_models():
         logger.info("Models not found. Training on startup...")
