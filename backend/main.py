@@ -83,7 +83,6 @@ async def root():
     }
 
 
-
 class AnalysisRequest(BaseModel):
     cv_text: str
     cgpa: float
