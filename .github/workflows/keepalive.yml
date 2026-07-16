@@ -1,36 +1,71 @@
-name: Keep Render Awake
+name: 🟢 Keep Backend Alive (24/7)
 
 on:
   schedule:
-    - cron: "*/14 * * * *"   # every 14 minutes (avoids the 15-min sleep threshold)
-  workflow_dispatch:
+    # Ping every 14 minutes — Render free tier sleeps after 15 min of inactivity
+    - cron: "*/14 * * * *"
+  workflow_dispatch:        # Allow manual trigger from GitHub UI
 
 jobs:
-  ping:
+  keepalive:
+    name: Ping Render Backend
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
-      - name: Wake up and ping backend
+      - name: Ping /health endpoint
+        id: ping_health
         run: |
-          echo "Pinging backend to prevent cold start..."
-          # --max-time 120  = wait up to 2 minutes for Render to wake up
-          # --retry 3       = retry 3 times if it fails
-          # --retry-delay 10 = wait 10s between retries
-          # --retry-connrefused = also retry on connection refused
+          echo "⏱ $(date -u) — Pinging backend health endpoint..."
+
+          START_TIME=$(date +%s%3N)
+
           STATUS=$(curl -o /dev/null -s -w "%{http_code}" \
             --max-time 120 \
             --retry 3 \
-            --retry-delay 10 \
+            --retry-delay 15 \
             --retry-connrefused \
             https://tonycv-backend.onrender.com/health)
-          
-          echo "Backend responded with HTTP $STATUS"
-          
+
+          END_TIME=$(date +%s%3N)
+          ELAPSED=$((END_TIME - START_TIME))
+
+          echo "Backend responded with HTTP $STATUS in ${ELAPSED}ms"
+
           if [ "$STATUS" = "200" ]; then
-            echo "✅ Backend is alive!"
+            echo "✅ /health → Backend is alive! (${ELAPSED}ms)"
+          elif [ "$STATUS" = "000" ]; then
+            echo "⚠️ /health → Connection timed out — Render may be starting up"
+            exit 0
           else
-            echo "⚠️ Backend returned $STATUS — may still be starting up"
-            # Don't fail the workflow — Render may just need more time
+            echo "⚠️ /health → Returned HTTP $STATUS — may still be warming up"
             exit 0
           fi
+
+      - name: Ping root endpoint (warm up)
+        run: |
+          echo "🌐 Pinging root endpoint to ensure all routes are warm..."
+
+          STATUS=$(curl -o /dev/null -s -w "%{http_code}" \
+            --max-time 60 \
+            --retry 2 \
+            --retry-delay 10 \
+            https://tonycv-backend.onrender.com/)
+
+          echo "Root endpoint responded with HTTP $STATUS"
+
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ / → Root endpoint is alive!"
+          else
+            echo "⚠️ / → Root endpoint returned $STATUS"
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "================================"
+          echo "Keepalive run complete at $(date -u)"
+          echo "Backend: https://tonycv-backend.onrender.com"
+          echo "Docs:    https://tonycv-backend.onrender.com/docs"
+          echo "================================"
+
