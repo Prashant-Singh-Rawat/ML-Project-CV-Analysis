@@ -23,6 +23,7 @@ def init_db():
             name TEXT NOT NULL,
             hashed_password TEXT,
             google_id TEXT,
+            github_id TEXT,
             device_fingerprint TEXT NOT NULL,
             phone TEXT,
             updates_enabled INTEGER DEFAULT 1,
@@ -42,6 +43,10 @@ def init_db():
         c.execute("ALTER TABLE users ADD COLUMN updates_enabled INTEGER DEFAULT 1")
     except sqlite3.OperationalError:
         pass  # Column already exists
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN github_id TEXT")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
 
     conn.commit()
     conn.close()
@@ -54,6 +59,7 @@ def create_user(
     hashed_password: str,
     device_fingerprint: str,
     google_id: str = None,
+    github_id: str = None,
     phone: str = None,
     updates_enabled: int = 1,
 ):
@@ -63,14 +69,15 @@ def create_user(
     try:
         c.execute(
             """
-            INSERT INTO users (email, name, hashed_password, google_id, device_fingerprint, phone, updates_enabled)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO users (email, name, hashed_password, google_id, github_id, device_fingerprint, phone, updates_enabled)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
             (
                 email,
                 name,
                 hashed_password,
                 google_id,
+                github_id,
                 device_fingerprint,
                 phone,
                 updates_enabled,
@@ -99,6 +106,16 @@ def get_user_by_google_id(google_id: str):
     conn = get_connection()
     c = conn.cursor()
     c.execute("SELECT * FROM users WHERE google_id = ?", (google_id,))
+    row = c.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def get_user_by_github_id(github_id: str):
+    """Fetch a user by GitHub ID. Returns dict or None."""
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("SELECT * FROM users WHERE github_id = ?", (github_id,))
     row = c.fetchone()
     conn.close()
     return dict(row) if row else None

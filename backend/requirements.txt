@@ -12,3 +12,4 @@ numpy>=1.26.4
 joblib>=1.3.0
 python-json-logger>=2.0.7
 fpdf
+httpx>=0.27.0

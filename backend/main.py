@@ -5,6 +5,8 @@ from typing import List, Optional
 import re
 import random
 import asyncio
+import os
+import urllib.request
 from fastapi.responses import JSONResponse
 
 from utils.logger import logger
@@ -288,6 +290,36 @@ class AnalysisResponse(BaseModel):
     match_details: Optional[List[dict]] = None
 
 
+async def keep_alive_task():
+    """Background task to keep the Render free tier server awake by pinging its own health endpoint."""
+    url = os.environ.get("RENDER_EXTERNAL_URL")
+    if not url:
+        logger.info("RENDER_EXTERNAL_URL not set. Keep-alive task is disabled.")
+        return
+        
+    health_url = f"{url}/health"
+    logger.info(f"Starting keep-alive task for {health_url}...")
+    
+    while True:
+        try:
+            # Wait 14 minutes (840 seconds) between pings to prevent Render from sleeping (15 min timeout)
+            await asyncio.sleep(840)
+            logger.info(f"Pinging {health_url} to keep server awake...")
+            req = urllib.request.Request(health_url, headers={'User-Agent': 'KeepAlive/1.0'})
+            
+            def _ping():
+                with urllib.request.urlopen(req, timeout=10) as response:
+                    return response.getcode()
+                    
+            status = await asyncio.to_thread(_ping)
+            logger.info(f"Keep-alive ping successful: HTTP {status}")
+        except asyncio.CancelledError:
+            logger.info("Keep-alive task cancelled during shutdown.")
+            break
+        except Exception as e:
+            logger.error(f"Keep-alive ping failed: {e}")
+
+
 @app.on_event("startup")
 async def startup_event():
     logger.info("Application starting up...")
@@ -298,6 +330,10 @@ async def startup_event():
     if not model_manager.load_models():
         logger.info("Models not found. Training on startup...")
         model_manager.train_models()
+        
+    # Start the keep-alive background task
+    asyncio.create_task(keep_alive_task())
+    
     logger.info("Startup complete.")
 
 

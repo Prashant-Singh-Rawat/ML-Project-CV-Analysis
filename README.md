@@ -9,7 +9,7 @@
 [![Backend: Render](https://img.shields.io/badge/Backend-Render-46E3B7.svg)](https://tonycv-backend.onrender.com)
 [![CI/CD](https://github.com/Prashant-Singh-Rawat/ML-Project-CV-Analysis/actions/workflows/ci.yml/badge.svg)](https://github.com/Prashant-Singh-Rawat/ML-Project-CV-Analysis/actions)
 
-**TonyCV** is a production-grade, end-to-end AI career intelligence platform that goes far beyond resume parsing. It combines advanced NLP, semantic ML matching, and an interactive career coaching suite — giving candidates, job seekers, and recruiters a complete 360° talent analysis system.
+**TonyCV** is a modern, AI-Powered Career Intelligence Platform designed to provide users with comprehensive career analysis and guidance. By leveraging Machine Learning and Natural Language Processing, TonyCV offers an interactive career coaching suite that goes far beyond standard resume parsing. It equips candidates, job seekers, and recruiters with a complete 360° talent analysis system.
 
 🌐 **Live App**: [prashant-singh-rawat.github.io/ML-Project-CV-Analysis](https://prashant-singh-rawat.github.io/ML-Project-CV-Analysis/)
 🔗 **API Backend**: [tonycv-backend.onrender.com](https://tonycv-backend.onrender.com)
@@ -96,15 +96,6 @@
 - Node.js v18+
 - Python 3.11 or 3.12+
 - Git
-
-### ⚡ Quick Start (Windows)
-We provide easy-to-use batch scripts to manage the local development servers:
-
-- **Start Servers**: Double-click **`start_servers.bat`** (Leaves a terminal window open).
-- **Stop Servers**: Simply close the terminal window, OR double-click **`stop_app.bat`**.
-- **Background Mode**: Double-click `start_hidden.vbs` to run silently in the background.
-
-*(The `setup_autostart.ps1` script can also be run to automatically launch the project on Windows boot).*
 
 ### Manual Installation
 
