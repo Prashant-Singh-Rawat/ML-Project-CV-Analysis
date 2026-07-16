@@ -35,11 +35,13 @@ def test_analyze_flow_success():
 
     # Send request to /analyze
     files = {"cv_file": ("resume.pdf", pdf_bytes, "application/pdf")}
-    data = {"target_company": "Google", "cgpa": "8.5"}
+    data = {"target_company": "Google", "cgpa": "8.5", "github_url": "", "experience_level": "fresher"}
 
     response = client.post("/analyze", files=files, data=data)
 
     # Should not hang, should return 200 OK
+    if response.status_code != 200:
+        print("ERROR:", response.text)
     assert response.status_code == 200
 
     json_data = response.json()

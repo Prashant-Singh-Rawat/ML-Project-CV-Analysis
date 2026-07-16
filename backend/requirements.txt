@@ -4,7 +4,7 @@ scikit-learn==1.8.0
 spacy>=3.7.2
 pandas>=2.2.1
 pydantic>=2.6.3
-python-multipart>=0.0.9
+python-multipart>=0.0.18
 pdfplumber>=0.11.0
 passlib[bcrypt]>=1.7.4
 python-jose[cryptography]>=3.3.0
