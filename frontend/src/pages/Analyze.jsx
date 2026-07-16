@@ -334,6 +334,27 @@ function getRouterState() {
   try { return window.history.state?.usr ?? null; } catch { return null; }
 }
 
+async function saveAnalysisHistory(analysisData, resumeName) {
+  let user = null;
+  try {
+    user = JSON.parse(localStorage.getItem('tonycv_user'));
+  } catch {
+    user = null;
+  }
+
+  if (!user?.id || !analysisData) return;
+
+  try {
+    await api.post('/resume-history', {
+      user_id: user.id,
+      resume_name: resumeName || 'Resume analysis',
+      analysis_result: analysisData,
+    });
+  } catch {
+    // History should never block the main analysis result.
+  }
+}
+
 export default function Analyze() {
   const navigate = useNavigate();
 
@@ -397,6 +418,8 @@ export default function Analyze() {
     setError('');
     try {
       const res = await api.post(`/analyze`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const uploadedFile = formData.get('cv_file');
+      await saveAnalysisHistory(res.data, uploadedFile?.name || 'Uploaded resume');
       navigate('/dashboard', { state: { analysisData: res.data } });
     } catch (err) {
       setError(err?.response?.data?.detail || 'Analysis failed. Please try again.');
@@ -418,6 +441,7 @@ export default function Analyze() {
       fd.append('target_company', companies[0] || 'Google');
       fd.append('job_description', '');
       const res = await api.post(`/analyze`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      await saveAnalysisHistory(res.data, resumeData.name ? `${resumeData.name} resume` : 'Built resume');
       navigate('/dashboard', { state: { analysisData: res.data } });
     } catch (err) {
       setError(err?.response?.data?.detail || 'Could not analyse your resume. Please try again.');

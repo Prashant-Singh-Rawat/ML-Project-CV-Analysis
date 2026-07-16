@@ -24,6 +24,7 @@ import InterviewSimulatorPage from './pages/InterviewSimulatorPage';
 import SalaryPredictPage from './pages/SalaryPredictPage';
 import SkillGapPage from './pages/SkillGapPage';
 import PortfolioAnalyzerPage from './pages/PortfolioAnalyzerPage';
+import ResumeHistoryPage from './pages/ResumeHistoryPage';
 
 /* ── Scroll-to-top on route change ── */
 function ScrollToTop() {
@@ -105,6 +106,7 @@ function Navbar({ user, onLogout, onOpenRegister }) {
   const resumeDropItems = [
     { label: 'Resume Builder', to: '/resume-builder', icon: '🛠️' },
     { label: 'Upload & Analyse', to: '/analyze', icon: '📊' },
+    { label: 'Version History', to: '/resume-history', icon: 'V' },
     { label: 'AI Rewrite Assistant', to: '/ai-rewrite', icon: '✨' },
     { label: 'ATS Score Checker', to: '/ats-score', icon: '📊' },
   ];
@@ -218,6 +220,7 @@ function Navbar({ user, onLogout, onOpenRegister }) {
                 { label: '📋 CV Builder', to: '/cv' },
                 { label: '✉️ Cover Letter', to: '/cover-letter' },
                 { label: '📊 Upload & Analyse', to: '/analyze' },
+                { label: 'Version History', to: '/resume-history' },
                 { label: '📰 Career Blog', to: '/career-blog' },
                 { label: 'ℹ️ About', to: '/about' },
               ].map((item) => (
@@ -325,6 +328,7 @@ function App() {
           <Route path="/salary-predict" element={<SalaryPredictPage />} />
           <Route path="/skill-gap" element={<SkillGapPage />} />
           <Route path="/portfolio-analyzer" element={<PortfolioAnalyzerPage />} />
+          <Route path="/resume-history" element={<ResumeHistoryPage />} />
           {/* Catch-all → Home */}
           <Route path="*" element={<Home />} />
         </Routes>
