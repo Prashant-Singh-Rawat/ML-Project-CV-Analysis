@@ -131,6 +131,33 @@ npm run dev
 
 ---
 
+### 🐳 Docker Setup (Recommended for cross-platform)
+
+No need to install Python, Node, or spaCy models locally - just Docker.
+
+**Prerequisites:** Docker Desktop (or Docker Engine + Compose) installed.
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+- Frontend: http://localhost:5173
+- Backend: http://localhost:8000
+- API docs: http://localhost:8000/docs
+
+To stop:
+```bash
+docker compose down
+```
+
+To rebuild after dependency changes:
+```bash
+docker compose up --build
+```
+
+---
+
 ## 📡 API Endpoints
 
 ### Core Analysis
