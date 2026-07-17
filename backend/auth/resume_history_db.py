@@ -5,8 +5,7 @@ from .user_db import get_connection
 def init_db():
     conn = get_connection()
     c = conn.cursor()
-    c.execute(
-        """
+    c.execute("""
         CREATE TABLE IF NOT EXISTS resume_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
@@ -20,8 +19,7 @@ def init_db():
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(id)
         )
-        """
-    )
+        """)
     conn.commit()
     conn.close()
 

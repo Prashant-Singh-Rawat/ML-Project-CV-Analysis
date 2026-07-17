@@ -15,8 +15,7 @@ def init_db():
     """Initialize the database and create tables if they don't exist."""
     conn = get_connection()
     c = conn.cursor()
-    c.execute(
-        """
+    c.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT UNIQUE NOT NULL,
@@ -32,8 +31,7 @@ def init_db():
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             last_login TEXT
         )
-    """
-    )
+    """)
     # Column migration safety checks
     try:
         c.execute("ALTER TABLE users ADD COLUMN phone TEXT")

@@ -3,7 +3,7 @@ semantic_matcher.py  —  CRASH-PROOF BERT semantic skill matching
 ----------------------------------------------------------------
 3-Layer Safety System:
   Layer 1: BERT model load failure → graceful fallback to keyword matching
-  Layer 2: BERT inference failure  → graceful fallback to keyword matching  
+  Layer 2: BERT inference failure  → graceful fallback to keyword matching
   Layer 3: Any unexpected error    → always returns a valid dict, never raises
 
 The website will NEVER crash because of this module.
