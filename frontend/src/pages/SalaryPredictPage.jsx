@@ -58,7 +58,7 @@ export default function SalaryPredictPage() {
             <div>
               <label className="block text-sm font-semibold text-slate-300 mb-2">Target Role</label>
               <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-slate-800/80 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm focus:outline-none">
-                {ROLES.map(r => <option key={r}>{r}</option>)}
+                {(ROLES ?? []).map(r => <option key={r}>{r}</option>)}
               </select>
             </div>
             <div>
