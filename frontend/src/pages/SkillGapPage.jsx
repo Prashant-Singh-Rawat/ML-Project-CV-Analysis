@@ -99,7 +99,7 @@ export default function SkillGapPage() {
                 <h3 className="text-green-400 font-black text-sm mb-4 uppercase tracking-wide">✅ Skills You Have</h3>
                 <div className="flex flex-wrap gap-2">
                   {result.acquired_skills.length > 0
-                    ? result.acquired_skills.map((s, i) => (
+                    ? result.(acquired_skills ?? []).map((s, i) => (
                         <span key={i} className="px-3 py-1.5 bg-green-500/20 text-green-300 text-xs font-bold rounded-full border border-green-500/30">{s}</span>
                       ))
                     : <p className="text-slate-500 text-sm">None matched yet.</p>}
