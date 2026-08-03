@@ -28,7 +28,7 @@ export default function SalaryPredictPage() {
           skills: skills.split(',').map(s => s.trim()).filter(Boolean),
           role,
           location,
-          experience_years: parseInt(expYears),
+          experience_years: parseInt(expYears, 10),
         }),
       });
       if (!res.ok) throw new Error();
