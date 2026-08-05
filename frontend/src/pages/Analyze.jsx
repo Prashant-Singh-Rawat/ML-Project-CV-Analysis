@@ -409,7 +409,7 @@ export default function Analyze() {
 
   // Fetch companies
   useEffect(() => {
-    api.get(`/companies`).then(r => setCompanies(r.data?.companies || FALLBACK_COMPANIES)).catch(() => {});
+    api.get(`/companies`).then(r => setCompanies(r.data?.companies || FALLBACK_COMPANIES)).catch( => console.error());
   }, []);
 
   // Handle analyze (upload path)
