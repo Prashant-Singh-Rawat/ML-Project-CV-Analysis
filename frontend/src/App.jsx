@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { FiSearch, FiCpu, FiMenu, FiX, FiChevronDown } from 'react-icons/fi';
+import { FiSearch, FiCpu, FiMenu, FiX, FiChevronDown, FiArrowUp } from 'react-icons/fi';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -31,6 +31,34 @@ function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
   return null;
+}
+
+/* ── Floating scroll-to-top button ── */
+function ScrollToTopButton() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const toggleVisibility = () => setVisible(window.scrollY > 400);
+    toggleVisibility();
+    window.addEventListener('scroll', toggleVisibility, { passive: true });
+    return () => window.removeEventListener('scroll', toggleVisibility);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <motion.button
+      initial={{ opacity: 0, y: 12, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 12, scale: 0.95 }}
+      transition={{ duration: 0.2 }}
+      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      className="fixed bottom-6 right-6 z-[60] flex h-12 w-12 items-center justify-center rounded-full border border-blue-200 bg-white text-blue-600 shadow-lg shadow-blue-100/80 transition hover:-translate-y-1 hover:bg-blue-600 hover:text-white"
+      aria-label="Scroll to top"
+    >
+      <FiArrowUp size={18} />
+    </motion.button>
+  );
 }
 
 /* ── Dropdown menu helper ── */
@@ -335,6 +363,7 @@ function App() {
       </main>
 
       <Footer />
+      <ScrollToTopButton />
 
       {/* Registration & Login Popup */}
       <RegisterPopup 
