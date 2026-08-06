@@ -32,3 +32,13 @@ frontend/.dist/
 
 # YOLO Badge Trigger
 # Pair Extraordinaire Trigger
+
+# ML model artifacts — generated at runtime, never committed
+backend/ml_pipeline/model.pkl
+*.pkl
+
+# Database files — sensitive, generated at runtime
+*.db
+*.sqlite
+backend/auth/*.db
+backend/auth/*.sqlite
