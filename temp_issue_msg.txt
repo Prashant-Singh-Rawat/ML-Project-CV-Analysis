@@ -1,0 +1,1 @@
+Hi @Taranpreet-codes, thank you for creating this issue and for your interest in improving the project! This looks like a valid request. I am assigning it to you so you can work on it. Feel free to open a PR when you have an implementation ready.

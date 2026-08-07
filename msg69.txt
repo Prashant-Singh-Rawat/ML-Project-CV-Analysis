@@ -1,0 +1,9 @@
+Hi @TomHacker69, a timeline for revision history is a much-needed addition.
+
+To implement this correctly:
+1. **Database Schema**: Ensure our database stores multiple resume analysis versions linked to a user, with timestamps.
+2. **Timeline UI**: Create a vertical timeline component in the frontend.
+3. **History API**: Add a backend endpoint to fetch a user's analysis history.
+4. **Version Diffing**: Add functionality to compare versions.
+
+I'm assigning this issue to you. This will be a huge usability win!

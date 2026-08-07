@@ -1,0 +1,16 @@
+Hi @saurabhhhcodes, thank you for your interest in contributing to this project! 🙏
+
+Unfortunately, after carefully reviewing this PR, we found that the changes contain **syntax errors and malformed code** that would break the application if merged. For example:
+- Invalid arrow function syntax (missing parameter in `.catch()`)  
+- Code placed outside of React component scope  
+- Incomplete or misplaced statements
+
+These appear to be auto-generated fixes that are not compatible with our codebase structure.
+
+We are closing this PR to keep the repository clean and stable. If you'd like to contribute:
+1. **Fork** the repository and clone it locally
+2. **Identify** a specific bug or issue to fix
+3. **Test** your changes locally before submitting
+4. **Open a PR** with a clear description of what was fixed and why
+
+We truly appreciate your enthusiasm and look forward to a well-crafted contribution in the future! 🚀

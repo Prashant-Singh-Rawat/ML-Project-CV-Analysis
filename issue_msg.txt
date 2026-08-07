@@ -1,0 +1,13 @@
+Hi @TomHacker69, excellent idea! A structured dashboard will give users an at-a-glance view of resume completeness.
+
+**Implementation Plan:**
+1. **Backend** — `/checklist` endpoint scoring: Contact, Skills, Education, Experience, Projects, Certifications
+2. **Scoring Logic** — Return completeness per section (present/partial/missing)
+3. **Frontend** — `ResumeChecklist.jsx` with progress rings per section
+4. **Dashboard Integration** — Embed in the analysis results page
+
+**Files:**
+- `backend/routers/analyze.py` — extend response
+- `frontend/src/components/ResumeChecklist.jsx` (new)
+
+Assigning to you! 💪

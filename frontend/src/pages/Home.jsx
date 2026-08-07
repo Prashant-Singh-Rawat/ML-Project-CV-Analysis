@@ -401,12 +401,13 @@ export default function Home() {
       const file = new File([blob], 'resume.pdf', { type: 'application/pdf' });
       const fd = new FormData();
       fd.append('file', file);
-      fd.append('target_company', companies[0] || 'Google');
+      fd.append('target_company', FALLBACK_COMPANIES[0] || 'Google');
       fd.append('job_description', '');
       const res = await api.post(`/analyze`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       navigate('/dashboard', { state: { analysisData: res.data } });
     } catch (err) {
-      setError(err?.response?.data?.detail || 'Could not analyse resume. Please try again.');
+      console.error("Analysis Error: ", err);
+      setError(err?.response?.data?.detail || err?.message || String(err) || 'Could not analyse resume. Please try again.');
     } finally {
       setIsLoading(false);
     }
