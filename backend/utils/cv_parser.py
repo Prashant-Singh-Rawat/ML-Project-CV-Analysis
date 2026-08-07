@@ -1,27 +1,73 @@
 import io
 import re
-import sys
 
 import pdfplumber
-import spacy
-
-# Load small english model. If not installed, you can use fallbacks or install it.
-try:
-    nlp = spacy.load("en_core_web_sm")
-except OSError:
-    # If not found, download it or fallback to basic parsing
-    import subprocess
-
-    print("Downloading spaCy model 'en_core_web_sm'...")
-    subprocess.run([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
-    try:
-        nlp = spacy.load("en_core_web_sm")
-    except OSError:
-        # Final fallback to a blank model if all else fails
-        print("Failed to download model. Falling back to blank English model.")
-        nlp = spacy.blank("en")
 
 from ml_pipeline.synthetic_data import SKILLS_DB
+
+# ── Known tech companies / organisations for lightweight NER ─────────────────
+_KNOWN_ORGS = [
+    "Google",
+    "Amazon",
+    "Microsoft",
+    "Meta",
+    "Apple",
+    "Netflix",
+    "Uber",
+    "Airbnb",
+    "Twitter",
+    "LinkedIn",
+    "Salesforce",
+    "Adobe",
+    "Oracle",
+    "IBM",
+    "Intel",
+    "NVIDIA",
+    "Qualcomm",
+    "Samsung",
+    "Sony",
+    "Accenture",
+    "Infosys",
+    "TCS",
+    "Wipro",
+    "HCL",
+    "Cognizant",
+    "Capgemini",
+    "Deloitte",
+    "McKinsey",
+    "BCG",
+    "Bain",
+    "JPMorgan",
+    "Goldman Sachs",
+    "Morgan Stanley",
+]
+
+_KNOWN_LOCS = [
+    "India",
+    "USA",
+    "United States",
+    "UK",
+    "United Kingdom",
+    "Germany",
+    "France",
+    "Canada",
+    "Australia",
+    "Singapore",
+    "Japan",
+    "China",
+    "Bangalore",
+    "Mumbai",
+    "Delhi",
+    "Hyderabad",
+    "Chennai",
+    "Pune",
+    "New York",
+    "San Francisco",
+    "London",
+    "Berlin",
+    "Seattle",
+    "Austin",
+]
 
 
 from transformers import pipeline
@@ -84,15 +130,30 @@ def extract_skills(text: str) -> list[str]:
 
 def extract_entities(text: str) -> dict[str, list[str]]:
     """
-    Uses spacy to extract proper nouns, organizations, and other entities.
+    Lightweight regex-based entity extraction (no spacy dependency).
+    Detects known organisations, locations, and capitalised proper nouns.
     """
-    doc = nlp(text)
-    entities = {"ORG": [], "PERSON": [], "GPE": []}  # Locations
+    entities: dict[str, list[str]] = {"ORG": [], "PERSON": [], "GPE": []}
 
-    for ent in doc.ents:
-        if ent.label_ in entities:
-            if ent.text not in entities[ent.label_]:
-                entities[ent.label_].append(ent.text)
+    # Match known orgs
+    for org in _KNOWN_ORGS:
+        if re.search(r"\b" + re.escape(org) + r"\b", text, re.IGNORECASE):
+            if org not in entities["ORG"]:
+                entities["ORG"].append(org)
+
+    # Match known locations
+    for loc in _KNOWN_LOCS:
+        if re.search(r"\b" + re.escape(loc) + r"\b", text, re.IGNORECASE):
+            if loc not in entities["GPE"]:
+                entities["GPE"].append(loc)
+
+    # Heuristic: two consecutive Title-Case words = likely a person name
+    person_pattern = re.compile(r"\b([A-Z][a-z]+ [A-Z][a-z]+)\b")
+    for match in person_pattern.findall(text):
+        # Exclude if it looks like a job title or organisation
+        if match not in entities["ORG"] and match not in entities["GPE"]:
+            if match not in entities["PERSON"]:
+                entities["PERSON"].append(match)
 
     return entities
 
@@ -161,11 +222,8 @@ def parse_cv_text(text: str) -> dict[str, any]:
     entities = extract_entities(text)
     inferred_role = infer_job_role(text)
 
-    # Calculate text length metrics
-    doc = nlp(text)
-    word_count = len(
-        [token for token in doc if not token.is_punct and not token.is_space]
-    )
+    # Simple word count using split (no spacy needed)
+    word_count = len([w for w in re.split(r"\s+", text) if w.strip()])
 
     return {
         "skills": skills,
