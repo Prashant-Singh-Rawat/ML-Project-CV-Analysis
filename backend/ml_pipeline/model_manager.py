@@ -27,15 +27,18 @@ class ModelManager:
         self.features_path = os.path.join(self.base_path, "features.joblib")
 
     def load_models(self):
-        if (
-            os.path.exists(self.model_path)
-            and os.path.exists(self.metrics_path)
-            and os.path.exists(self.features_path)
-        ):
-            self.model = joblib.load(self.model_path)
-            self.metrics = joblib.load(self.metrics_path)
-            self.feature_names = joblib.load(self.features_path)
-            return True
+        try:
+            if (
+                os.path.exists(self.model_path)
+                and os.path.exists(self.metrics_path)
+                and os.path.exists(self.features_path)
+            ):
+                self.model = joblib.load(self.model_path)
+                self.metrics = joblib.load(self.metrics_path)
+                self.feature_names = joblib.load(self.features_path)
+                return True
+        except Exception as e:
+            print(f"Error loading models: {e}")
         return False
 
     def train_models(self):

@@ -313,13 +313,16 @@ async def keep_alive_task():
 @app.on_event("startup")
 async def startup_event():
     logger.info("Application starting up...")
-    # Initialize auth database
-    auth_db.init_db()
-    resume_history_db.init_db()
-    # Attempt to load or train models on startup
-    if not model_manager.load_models():
-        logger.info("Models not found. Training on startup...")
-        model_manager.train_models()
+    try:
+        # Initialize auth database
+        auth_db.init_db()
+        resume_history_db.init_db()
+        # Attempt to load or train models on startup
+        if not model_manager.load_models():
+            logger.info("Models not found. Training on startup...")
+            model_manager.train_models()
+    except Exception as exc:
+        logger.error(f"Error during startup initialization: {exc}", exc_info=True)
 
     # Start the keep-alive background task
     asyncio.create_task(keep_alive_task())
