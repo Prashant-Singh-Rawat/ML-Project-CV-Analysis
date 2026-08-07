@@ -8,6 +8,10 @@ import asyncio
 import os
 import urllib.request
 from fastapi.responses import JSONResponse
+import os
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from utils.logger import logger
 from utils.middleware import RequestIDMiddleware, TimingMiddleware
@@ -24,6 +28,15 @@ from auth.auth_routes import router as auth_router
 from routes.features import router as features_router
 from routes.resume_history import router as resume_history_router
 
+# Limits are configurable via environment variables so operators can tune
+# them without code changes.
+RATE_ANALYZE      = os.getenv("RATE_ANALYZE",     "5/minute")
+RATE_FEATURES_HVY = os.getenv("RATE_FEATURES_HVY", "10/minute")
+RATE_FEATURES_LGT = os.getenv("RATE_FEATURES_LGT", "20/minute")
+RATE_AUTH         = os.getenv("RATE_AUTH",          "10/minute")
+
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(title="TonyCV API", version="2.0.0")
 
 # Setup CORS
@@ -39,6 +52,8 @@ app.add_middleware(
 app.add_middleware(TimingMiddleware)
 app.add_middleware(RequestIDMiddleware)
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Global Exception Handler
 @app.exception_handler(Exception)
@@ -380,6 +395,7 @@ async def get_market_pulse():
 
 
 @app.post("/analyze", response_model=AnalysisResponse)
+@limiter.limit(RATE_ANALYZE)
 async def analyze_cv(
     cv_file: UploadFile = File(...),
     cgpa: Optional[float] = Form(None),

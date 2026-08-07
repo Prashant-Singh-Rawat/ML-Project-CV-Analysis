@@ -4,11 +4,32 @@ from typing import List, Dict, Any, Optional
 import random
 import re
 import math
+from main import limiter, RATE_FEATURES_HVY, RATE_FEATURES_LGT
 from ml_pipeline.semantic_matcher import semantic_skill_match
 
 router = APIRouter(prefix="/features", tags=["Enhancement Features"])
 
 # ─── PYDANTIC MODELS ───
+
+@router.post("/rewrite")
+@limiter.limit(RATE_FEATURES_HVY)
+async def rewrite(request: Request, ...):
+    ...
+
+@router.post("/ats-score")
+@limiter.limit(RATE_FEATURES_HVY)
+async def ats_score(request: Request, ...):
+    ...
+
+@router.post("/salary-predict")
+@limiter.limit(RATE_FEATURES_LGT)
+async def salary_predict(request: Request, ...):
+    ...
+
+@router.post("/jd-match")
+@limiter.limit(RATE_FEATURES_LGT)
+async def jd_match(request: Request, ...):
+    ...
 
 
 class RewriteRequest(BaseModel):
