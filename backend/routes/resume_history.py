@@ -1,9 +1,9 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
-from typing import Any, Dict, List, Optional
 import re
+from typing import Any
 
 from auth import resume_history_db
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/resume-history", tags=["Resume History"])
 
@@ -63,8 +63,8 @@ KNOWN_RESUME_SKILLS = [
 
 class ResumeHistoryCreateRequest(BaseModel):
     user_id: int
-    resume_name: Optional[str] = None
-    analysis_result: Dict[str, Any]
+    resume_name: str | None = None
+    analysis_result: dict[str, Any]
 
 
 class ResumeHistoryCompareRequest(BaseModel):
@@ -104,11 +104,15 @@ async def compare_resume_versions(req: ResumeHistoryCompareRequest):
     if not base or not target:
         raise HTTPException(status_code=404, detail="Resume version not found.")
     if base["user_id"] != req.user_id or target["user_id"] != req.user_id:
-        raise HTTPException(status_code=403, detail="Cannot compare another user's resume versions.")
+        raise HTTPException(
+            status_code=403, detail="Cannot compare another user's resume versions."
+        )
 
     added_skills, removed_skills = _diff_items(base["skills"], target["skills"])
     added_projects, removed_projects = _diff_items(base["projects"], target["projects"])
-    added_experience, removed_experience = _diff_items(base["experience"], target["experience"])
+    added_experience, removed_experience = _diff_items(
+        base["experience"], target["experience"]
+    )
     added_certifications, removed_certifications = _diff_items(
         base["certifications"], target["certifications"]
     )
@@ -194,8 +198,7 @@ def _extract_section_lines(text, headings):
         return []
 
     lines = [
-        re.sub(r"^[\s\-*•]+", "", line).strip()
-        for line in match.group(2).splitlines()
+        re.sub(r"^[\s\-*•]+", "", line).strip() for line in match.group(2).splitlines()
     ]
     return _unique_text_items([line for line in lines if len(line) > 3])
 
@@ -230,9 +233,15 @@ def _comparison_summary(score_delta, added_skills, removed_skills):
         parts.append("ATS score stayed the same.")
 
     if added_skills:
-        parts.append(f"Added {len(added_skills)} skill(s): {', '.join(added_skills[:5])}.")
+        parts.append(
+            f"Added {len(added_skills)} skill(s): {', '.join(added_skills[:5])}."
+        )
     if removed_skills:
-        parts.append(f"Removed {len(removed_skills)} skill(s): {', '.join(removed_skills[:5])}.")
+        parts.append(
+            f"Removed {len(removed_skills)} skill(s): {', '.join(removed_skills[:5])}."
+        )
     if not added_skills and not removed_skills:
-        parts.append("Skill coverage is unchanged; improve impact bullets and section detail next.")
+        parts.append(
+            "Skill coverage is unchanged; improve impact bullets and section detail next."
+        )
     return " ".join(parts)

@@ -1,18 +1,19 @@
 import os
-import pandas as pd
+
 import joblib
+import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, accuracy_score
-from ml_pipeline.synthetic_data import (
-    COMPANY_REQUIREMENTS,
-    generate_synthetic_data,
-    COMPANIES,
-)
 
 # ── BERT Semantic Matcher ───────────────────────────────────────────────────
 # Import lazily — the model only loads into RAM when first needed
 from ml_pipeline.semantic_matcher import semantic_skill_match
+from ml_pipeline.synthetic_data import (
+    COMPANIES,
+    COMPANY_REQUIREMENTS,
+    generate_synthetic_data,
+)
 
 
 class ModelManager:
@@ -26,15 +27,18 @@ class ModelManager:
         self.features_path = os.path.join(self.base_path, "features.joblib")
 
     def load_models(self):
-        if (
-            os.path.exists(self.model_path)
-            and os.path.exists(self.metrics_path)
-            and os.path.exists(self.features_path)
-        ):
-            self.model = joblib.load(self.model_path)
-            self.metrics = joblib.load(self.metrics_path)
-            self.feature_names = joblib.load(self.features_path)
-            return True
+        try:
+            if (
+                os.path.exists(self.model_path)
+                and os.path.exists(self.metrics_path)
+                and os.path.exists(self.features_path)
+            ):
+                self.model = joblib.load(self.model_path)
+                self.metrics = joblib.load(self.metrics_path)
+                self.feature_names = joblib.load(self.features_path)
+                return True
+        except Exception as e:
+            print(f"Error loading models: {e}")
         return False
 
     def train_models(self):

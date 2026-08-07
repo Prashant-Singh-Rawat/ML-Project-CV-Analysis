@@ -1,0 +1,9 @@
+Hi @TomHacker69, thanks for creating this issue! A recruiter-friendly summary powered by AI is a standout feature.
+
+To build this, we'll need the following changes:
+1. **LLM Prompt Engineering**: Design a specific prompt to ingest the parsed resume and output a summary.
+2. **Summary Data Structure**: Define a JSON schema for the summary response.
+3. **Frontend Integration**: Build a UI component to display the summary.
+4. **Copy functionality**: Add a 'Copy to Clipboard' button.
+
+This is a great idea and is approved. I'll assign it to you to get started!

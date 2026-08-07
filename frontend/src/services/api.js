@@ -14,7 +14,7 @@ let wakingUpToastId = null;
 // Timeout is 30s for local dev. Set to 90s for production (Render cold start).
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000, // 30 seconds for local dev
+  timeout: 90000, // 90 seconds for Render cold starts
 });
 
 // Auto-retry with exponential backoff: 3 retries, 1s → 2s → 4s delay

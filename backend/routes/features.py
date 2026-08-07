@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Optional
+import math
 import random
 import re
-import math
+from typing import Any
+
+from fastapi import APIRouter, HTTPException
 from ml_pipeline.semantic_matcher import semantic_skill_match
+from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/features", tags=["Enhancement Features"])
 
@@ -18,35 +19,35 @@ class RewriteRequest(BaseModel):
 
 class RewriteResponse(BaseModel):
     original: str
-    suggestions: List[str]
-    tips: List[str]
+    suggestions: list[str]
+    tips: list[str]
 
 
 class AtsScoreRequest(BaseModel):
     cv_text: str
-    skills: List[str]
+    skills: list[str]
 
 
 class AtsScoreResponse(BaseModel):
     score: int
-    categories: Dict[str, int]
-    recommendations: List[str]
+    categories: dict[str, int]
+    recommendations: list[str]
 
 
 class JdMatchRequest(BaseModel):
     cv_text: str
     job_description: str
-    candidate_skills: List[str]
+    candidate_skills: list[str]
 
 
 class CareerRoadmapRequest(BaseModel):
-    current_skills: List[str]
+    current_skills: list[str]
     desired_role: str
     experience_level: str
 
 
 class CareerRoadmapResponse(BaseModel):
-    roadmap: List[Dict[str, Any]]
+    roadmap: list[dict[str, Any]]
     estimated_timeline: str
 
 
@@ -55,17 +56,17 @@ class GithubStatsRequest(BaseModel):
 
 
 class PortfolioRequest(BaseModel):
-    github_url: Optional[str] = ""
-    linkedin_url: Optional[str] = ""
-    leetcode_user: Optional[str] = ""
-    codeforces_user: Optional[str] = ""
-    hackerrank_user: Optional[str] = ""
+    github_url: str | None = ""
+    linkedin_url: str | None = ""
+    leetcode_user: str | None = ""
+    codeforces_user: str | None = ""
+    hackerrank_user: str | None = ""
 
 
 class InterviewQuestionRequest(BaseModel):
     role: str
     stage: str  # "technical", "hr", "behavioral"
-    previous_answers: Optional[List[Dict[str, str]]] = Field(default_factory=list)
+    previous_answers: list[dict[str, str]] | None = Field(default_factory=list)
 
 
 class InterviewEvaluationRequest(BaseModel):
@@ -76,12 +77,12 @@ class InterviewEvaluationRequest(BaseModel):
 
 
 class RecruiterCompareRequest(BaseModel):
-    candidates: List[Dict[str, Any]]
+    candidates: list[dict[str, Any]]
     job_role: str
 
 
 class SalaryPredictionRequest(BaseModel):
-    skills: List[str]
+    skills: list[str]
     role: str
     location: str
     experience_years: int
@@ -553,7 +554,7 @@ async def evaluate_interview_response(req: InterviewEvaluationRequest):
 
 
 # ─── 8. RECRUITER DASHBOARD ───
-@router.post("/recruiter/compare", response_model=Dict[str, Any])
+@router.post("/recruiter/compare", response_model=dict[str, Any])
 async def recruiter_compare_candidates(req: RecruiterCompareRequest):
     candidates = req.candidates
     job_role = req.job_role

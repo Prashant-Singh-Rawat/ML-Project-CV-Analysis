@@ -1,0 +1,9 @@
+Hi @TomHacker69, focusing on soft skills is a great way to differentiate our analyzer.
+
+Here are the necessary steps to tackle this:
+1. **Soft Skills Dictionary/Model**: Update our NLP pipeline with a predefined list of soft skills or a classifier model.
+2. **Confidence Scoring**: Implement a heuristic to score how confidently we detect these skills.
+3. **Recommendation Engine**: Add logic to suggest missing soft skills based on the user's role.
+4. **UI Updates**: Create a dedicated section in the report.
+
+This is a very valuable feature. I've assigned the issue to you. Thanks for contributing!

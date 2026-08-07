@@ -1,11 +1,12 @@
-from fastapi import APIRouter, HTTPException, Header, Request
+import os
+from datetime import datetime
+
+import httpx
+from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime
-import os
-import httpx
-from . import user_db, auth_utils
+
+from . import auth_utils, user_db
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -18,8 +19,8 @@ class RegisterRequest(BaseModel):
     name: str
     password: str
     device_fingerprint: str
-    phone: Optional[str] = None
-    updates_enabled: Optional[bool] = True
+    phone: str | None = None
+    updates_enabled: bool | None = True
 
 
 class LoginRequest(BaseModel):
@@ -40,8 +41,8 @@ class UserResponse(BaseModel):
     id: int
     email: str
     name: str
-    phone: Optional[str] = None
-    updates_enabled: Optional[bool] = True
+    phone: str | None = None
+    updates_enabled: bool | None = True
 
 
 class TokenResponse(BaseModel):
@@ -137,7 +138,7 @@ async def register(req: RegisterRequest):
 
 class UpdateSettingsRequest(BaseModel):
     email: str
-    phone: Optional[str] = None
+    phone: str | None = None
     updates_enabled: bool
 
 
@@ -269,8 +270,10 @@ async def github_login():
 async def github_callback(code: str, request: Request):
     client_id = os.environ.get("GITHUB_CLIENT_ID")
     client_secret = os.environ.get("GITHUB_CLIENT_SECRET")
-    frontend_url = os.environ.get("FRONTEND_URL", "https://prashant-singh-rawat.github.io/ML-Project-CV-Analysis")
-    
+    frontend_url = os.environ.get(
+        "FRONTEND_URL", "https://prashant-singh-rawat.github.io/ML-Project-CV-Analysis"
+    )
+
     if not client_id or not client_secret:
         raise HTTPException(status_code=500, detail="GitHub OAuth is not configured.")
 
@@ -289,7 +292,9 @@ async def github_callback(code: str, request: Request):
         access_token = token_data.get("access_token")
 
         if not access_token:
-            raise HTTPException(status_code=400, detail="Failed to retrieve access token from GitHub.")
+            raise HTTPException(
+                status_code=400, detail="Failed to retrieve access token from GitHub."
+            )
 
         # 2. Fetch user profile
         user_res = await client.get(
@@ -299,7 +304,7 @@ async def github_callback(code: str, request: Request):
         github_user = user_res.json()
         github_id = str(github_user.get("id"))
         name = github_user.get("name") or github_user.get("login") or "GitHub User"
-        
+
         # 3. Fetch user email (since email might be private)
         email = github_user.get("email")
         if not email:
@@ -315,11 +320,11 @@ async def github_callback(code: str, request: Request):
                 email = emails[0].get("email")
             else:
                 email = f"{github_user.get('login')}@github.com"
-                
+
     # Check if user already exists by GitHub ID
     user = user_db.get_user_by_github_id(github_id)
     device_fingerprint = request.headers.get("User-Agent", "Unknown Device")
-    
+
     if user:
         user_db.update_last_login(user["email"])
     else:
@@ -328,9 +333,9 @@ async def github_callback(code: str, request: Request):
         if existing_by_email:
             raise HTTPException(
                 status_code=409,
-                detail="This email is already registered with another account type. Please log in with your existing account."
+                detail="This email is already registered with another account type. Please log in with your existing account.",
             )
-            
+
         # Create new GitHub user
         user = user_db.create_user(
             email=email,
@@ -340,7 +345,9 @@ async def github_callback(code: str, request: Request):
             github_id=github_id,
         )
         if not user:
-            raise HTTPException(status_code=500, detail="Failed to create GitHub account.")
+            raise HTTPException(
+                status_code=500, detail="Failed to create GitHub account."
+            )
 
     # Generate JWT token
     token = auth_utils.create_access_token(
