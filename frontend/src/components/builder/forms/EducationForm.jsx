@@ -32,7 +32,7 @@ export default function EducationForm() {
       </div>
 
       <div className="space-y-3">
-        {resumeData.education.map((edu, index) => {
+        {resumeData.education.map((edu) => {
           const isExpanded = expandedId === edu.id;
           
           return (

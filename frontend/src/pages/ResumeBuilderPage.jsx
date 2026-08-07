@@ -2,10 +2,8 @@ import React from 'react';
 import FormPanel from '../components/builder/FormPanel';
 import PreviewPanel from '../components/builder/PreviewPanel';
 import AIPanel from '../components/builder/AIPanel';
-import { useResumeStore } from '../store/resumeStore';
 
 export default function ResumeBuilderPage() {
-  const { design } = useResumeStore();
 
   return (
     <div className="h-screen w-full bg-slate-50 flex overflow-hidden">

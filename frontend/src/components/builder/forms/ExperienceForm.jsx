@@ -32,7 +32,7 @@ export default function ExperienceForm() {
       </div>
 
       <div className="space-y-3">
-        {resumeData.experience.map((exp, index) => {
+        {resumeData.experience.map((exp) => {
           const isExpanded = expandedId === exp.id;
           
           return (

@@ -22,7 +22,7 @@ import { chromium } from 'playwright';
      try {
        await page.click('button:has-text("Next")');
        await page.waitForTimeout(500);
-     } catch(e) {
+     } catch {
        console.log("Next button not found, maybe we reached the end");
        break;
      }

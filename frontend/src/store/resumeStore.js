@@ -41,7 +41,7 @@ const initialDesignState = {
 
 export const useResumeStore = create(
   persist(
-    (set, get) => ({
+    (set) => ({
       // Data State
       resumeData: initialResumeData,
       design: initialDesignState,
