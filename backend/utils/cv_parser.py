@@ -110,12 +110,56 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
     return text
 
 
+# Load Zero-Shot Classification pipeline for inferring job roles
+_zero_shot_pipeline = None
+
+def get_zero_shot_pipeline():
+    global _zero_shot_pipeline
+    if _zero_shot_pipeline is None:
+        try:
+            _zero_shot_pipeline = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+        except Exception as e:
+            print(f"Error loading zero-shot pipeline: {e}")
+            _zero_shot_pipeline = False
+    return _zero_shot_pipeline
+
+ONET_JOB_ROLES = [
+    "Software Developer",
+    "Data Scientist",
+    "Machine Learning Engineer",
+    "Frontend Developer",
+    "Backend Developer",
+    "DevOps Engineer",
+    "Product Manager",
+    "Database Administrator",
+    "Cybersecurity Analyst",
+    "Cloud Architect"
+]
+
+def infer_job_role(text: str) -> str:
+    """
+    Infers the standard O*NET job role using a zero-shot classification model.
+    """
+    classifier = get_zero_shot_pipeline()
+    if classifier:
+        try:
+            # Evaluate the first 2000 characters which usually contain the summary/experience
+            truncated_text = text[:2000]
+            result = classifier(truncated_text, candidate_labels=ONET_JOB_ROLES)
+            # Return the highest scoring role
+            return result["labels"][0]
+        except Exception as e:
+            print(f"Zero-shot classification failed: {e}")
+            
+    return "Unknown Role"
+
 def parse_cv_text(text: str) -> dict[str, any]:
     """
     Main parser function that takes raw CV text and returns parsed structured data.
     """
     skills = extract_skills(text)
     entities = extract_entities(text)
+    inferred_role = infer_job_role(text)
 
     # Calculate text length metrics
     doc = nlp(text)
@@ -128,6 +172,7 @@ def parse_cv_text(text: str) -> dict[str, any]:
         "organizations": entities["ORG"],
         "persons": entities["PERSON"],
         "locations": entities["GPE"],
+        "inferred_role": inferred_role,
         "word_count": word_count,
         "raw_text": text,
     }
