@@ -19,14 +19,16 @@ for module_name in [
     "jose",
     "jose.jwt",
     "pythonjsonlogger",
-    "sentence_transformers",
 ]:
-    sys.modules[module_name] = (
-        MagicMock() if module_name not in sys.modules else sys.modules[module_name]
-    )
+    try:
+        __import__(module_name)
+    except ImportError:
+        sys.modules[module_name] = (
+            MagicMock() if module_name not in sys.modules else sys.modules[module_name]
+        )
 
-
-# Setup sentence_transformers mock utilities
+# Always mock sentence-transformers to avoid downloading heavy models in unit tests
+sys.modules["sentence_transformers"] = MagicMock()
 mock_st = sys.modules["sentence_transformers"]
 mock_util = MagicMock()
 mock_st.util = mock_util
