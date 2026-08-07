@@ -2,8 +2,8 @@ import sqlite3
 import os
 from datetime import datetime, timedelta
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "users.db")
-
+_default_db_path = os.path.join(os.path.dirname(__file__), "users.db")
+DATABASE_PATH = os.getenv("DB_PATH", _default_db_path)
 
 def get_connection():
     conn = sqlite3.connect(DB_PATH)

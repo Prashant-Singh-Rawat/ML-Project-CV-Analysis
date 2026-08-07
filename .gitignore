@@ -32,3 +32,9 @@ frontend/.dist/
 
 # YOLO Badge Trigger
 # Pair Extraordinaire Trigger
+
+# Database files — must never be committed
+*.db
+*.sqlite
+backend/**/*.db
+backend/**/*.sqlite

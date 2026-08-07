@@ -28,6 +28,30 @@ from auth.auth_routes import router as auth_router
 from routes.features import router as features_router
 from routes.resume_history import router as resume_history_router
 
+def _validate_env():
+    """Fail fast if security-critical env vars are misconfigured."""
+    jwt_secret = os.getenv("JWT_SECRET_KEY", "")
+    if not jwt_secret:
+        print(
+            "[STARTUP ERROR] JWT_SECRET_KEY is not set.\n"
+            "Generate one with:\n"
+            "  python -c \"import secrets; print(secrets.token_hex(32))\"\n"
+            "Then set it in your .env file.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    if len(jwt_secret) < 32:
+        print(
+            f"[STARTUP ERROR] JWT_SECRET_KEY is too short ({len(jwt_secret)} chars).\n"
+            "Minimum required: 32 characters.\n"
+            "Generate a secure one with:\n"
+            "  python -c \"import secrets; print(secrets.token_hex(32))\"",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+_validate_env()  # Called at module load time before any endpoint is registered
+
 # Limits are configurable via environment variables so operators can tune
 # them without code changes.
 RATE_ANALYZE      = os.getenv("RATE_ANALYZE",     "5/minute")
