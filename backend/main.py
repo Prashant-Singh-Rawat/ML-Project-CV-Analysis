@@ -1,11 +1,7 @@
-from fastapi import FastAPI, HTTPException, File, UploadFile, Form
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Optional
-import re
-import random
 import asyncio
 import os
+import random
+import re
 import urllib.request
 from fastapi.responses import JSONResponse
 import os
@@ -24,9 +20,18 @@ from ml_pipeline.synthetic_data import COMPANIES
 from auth import resume_history_db
 from auth import user_db as auth_db
 from auth.auth_routes import router as auth_router
-
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from ml_pipeline.model_manager import ModelManager
+from ml_pipeline.semantic_matcher import semantic_skill_match
+from ml_pipeline.synthetic_data import COMPANIES
+from pydantic import BaseModel
 from routes.features import router as features_router
 from routes.resume_history import router as resume_history_router
+from utils.cv_parser import extract_text_from_pdf, parse_cv_text
+from utils.logger import logger
+from utils.middleware import RequestIDMiddleware, TimingMiddleware
 
 def _validate_env():
     """Fail fast if security-critical env vars are misconfigured."""
@@ -125,7 +130,6 @@ async def root():
         "docs": "/docs",
         "health": "/health",
     }
-
 
 
 class AnalysisRequest(BaseModel):
@@ -237,10 +241,13 @@ def compute_hiring_analysis(candidate_skills, cgpa, experience_level):
 
     for role, config in JOB_CATEGORIES.items():
         req_skills = config["skills"]
-        matched = set(s.lower() for s in candidate_skills).intersection(
-            set(s.lower() for s in req_skills)
+
+        sem_res = semantic_skill_match(
+            candidate_skills, req_skills, similarity_threshold=0.55
         )
-        skill_match = (len(matched) / len(req_skills)) * 100 if req_skills else 50
+        skill_match = sem_res["skill_match_pct"]
+        matched_display = sem_res["matched_skills"]
+        missing_display = sem_res["missing_skills"]
 
         # Experience weight
         exp_weight = config["weights"].get(exp_key, 0.5)
@@ -268,17 +275,6 @@ def compute_hiring_analysis(candidate_skills, cgpa, experience_level):
             recommendation = "Moderate Fit"
         else:
             recommendation = "Needs Improvement"
-
-        matched_display = [
-            s
-            for s in req_skills
-            if s.lower() in set(sk.lower() for sk in candidate_skills)
-        ]
-        missing_display = [
-            s
-            for s in req_skills
-            if s.lower() not in set(sk.lower() for sk in candidate_skills)
-        ]
 
         results.append(
             {
@@ -317,16 +313,16 @@ class AnalysisResponse(BaseModel):
     placement_probability: float
     placement_status: str
     skill_match_pct: float
-    matched_skills: List[str]
-    missing_skills: List[str]
+    matched_skills: list[str]
+    missing_skills: list[str]
     extracted_entities: dict
     cv_text: str
-    keyword_highlights: List[dict]
-    github_analysis: Optional[List[dict]] = None
-    market_pulse_adjustments: Optional[dict] = None
-    hiring_analysis: Optional[dict] = None
-    experience_level: Optional[str] = None
-    match_details: Optional[List[dict]] = None
+    keyword_highlights: list[dict]
+    github_analysis: list[dict] | None = None
+    market_pulse_adjustments: dict | None = None
+    hiring_analysis: dict | None = None
+    experience_level: str | None = None
+    match_details: list[dict] | None = None
 
 
 async def keep_alive_task():
@@ -335,21 +331,23 @@ async def keep_alive_task():
     if not url:
         logger.info("RENDER_EXTERNAL_URL not set. Keep-alive task is disabled.")
         return
-        
+
     health_url = f"{url}/health"
     logger.info(f"Starting keep-alive task for {health_url}...")
-    
+
     while True:
         try:
             # Wait 14 minutes (840 seconds) between pings to prevent Render from sleeping (15 min timeout)
             await asyncio.sleep(840)
             logger.info(f"Pinging {health_url} to keep server awake...")
-            req = urllib.request.Request(health_url, headers={'User-Agent': 'KeepAlive/1.0'})
-            
+            req = urllib.request.Request(
+                health_url, headers={"User-Agent": "KeepAlive/1.0"}
+            )
+
             def _ping():
                 with urllib.request.urlopen(req, timeout=10) as response:
                     return response.getcode()
-                    
+
             status = await asyncio.to_thread(_ping)
             logger.info(f"Keep-alive ping successful: HTTP {status}")
         except asyncio.CancelledError:
@@ -362,28 +360,21 @@ async def keep_alive_task():
 @app.on_event("startup")
 async def startup_event():
     logger.info("Application starting up...")
-    # Initialize auth database
-    auth_db.init_db()
-    resume_history_db.init_db()
-    # Attempt to load or train models on startup
-    if not model_manager.load_models():
-        logger.info("Models not found. Training on startup...")
-        model_manager.train_models()
-        
+    try:
+        # Initialize auth database
+        auth_db.init_db()
+        resume_history_db.init_db()
+        # Attempt to load or train models on startup
+        if not model_manager.load_models():
+            logger.info("Models not found. Training on startup...")
+            model_manager.train_models()
+    except Exception as exc:
+        logger.error(f"Error during startup initialization: {exc}", exc_info=True)
+
     # Start the keep-alive background task
     asyncio.create_task(keep_alive_task())
-    
+
     logger.info("Startup complete.")
-
-
-@app.get("/health")
-async def health_check():
-    """
-    Lightweight health check endpoint.
-    Returns 200 immediately — does NOT load ML models.
-    Used by: Render health checks, GitHub Actions keepalive ping.
-    """
-    return {"status": "ok", "service": "TonyCV API", "version": "3.0.0"}
 
 
 @app.get("/companies")
@@ -422,10 +413,10 @@ async def get_market_pulse():
 @limiter.limit(RATE_ANALYZE)
 async def analyze_cv(
     cv_file: UploadFile = File(...),
-    cgpa: Optional[float] = Form(None),
-    target_company: Optional[str] = Form(None),
-    github_url: Optional[str] = Form(""),
-    experience_level: Optional[str] = Form("fresher"),
+    cgpa: float | None = Form(None),
+    target_company: str | None = Form(None),
+    github_url: str | None = Form(""),
+    experience_level: str | None = Form("fresher"),
 ):
     # 1. Read and Parse the CV PDF
     if not cv_file.filename.endswith(".pdf"):
@@ -438,16 +429,17 @@ async def analyze_cv(
             asyncio.to_thread(extract_text_from_pdf, file_bytes), timeout=15.0
         )
     except asyncio.TimeoutError:
-        logger.error("PDF Parsing Timeout", extra={"filename": cv_file.filename})
+        logger.error("PDF Parsing Timeout", extra={"cv_filename": cv_file.filename})
         raise HTTPException(
             status_code=408,
             detail="Resume parsing timed out. The file might be too large or complex.",
         )
     except Exception as e:
         logger.error(
-            "PDF Parsing Error", extra={"error": str(e), "filename": cv_file.filename}
+            "PDF Parsing Error",
+            extra={"error": str(e), "cv_filename": cv_file.filename},
         )
-        raise HTTPException(status_code=500, detail=f"Failed to read PDF: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to read PDF: {e!s}")
 
     if not cv_text.strip():
         raise HTTPException(

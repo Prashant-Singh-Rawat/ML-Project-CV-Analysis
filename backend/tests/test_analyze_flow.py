@@ -1,6 +1,7 @@
-from fastapi.testclient import TestClient
-import sys
 import os
+import sys
+
+from fastapi.testclient import TestClient
 
 # Add backend directory to sys.path so we can import main
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -17,25 +18,18 @@ def test_health_check():
 
 def test_analyze_flow_success():
     """Test that a valid PDF successfully returns a hiring analysis."""
-    # Create a dummy PDF in memory
-    from fpdf import FPDF
-
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("helvetica", "B", 16)
-    pdf.cell(40, 10, "Test User Resume")
-    pdf.ln(10)
-    pdf.set_font("helvetica", "", 12)
-    pdf.cell(40, 10, "Skills: Python, Machine Learning, React, JavaScript")
-
-    # Get PDF bytes
-    pdf_bytes = pdf.output(dest="S")
-    if isinstance(pdf_bytes, str):
-        pdf_bytes = pdf_bytes.encode("latin1")
+    # Read dummy PDF from disk
+    pdf_path = os.path.join(os.path.dirname(__file__), "dummy_resume.pdf")
+    with open(pdf_path, "rb") as f:
+        pdf_bytes = f.read()
 
     # Send request to /analyze
     files = {"cv_file": ("resume.pdf", pdf_bytes, "application/pdf")}
-    data = {"target_company": "Google", "cgpa": "8.5", "github_url": "", "experience_level": "fresher"}
+    data = {
+        "target_company": "Google",
+        "cgpa": "8.5",
+        "experience_level": "fresher",
+    }
 
     response = client.post("/analyze", files=files, data=data)
 

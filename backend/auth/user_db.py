@@ -1,5 +1,5 @@
-import sqlite3
 import os
+import sqlite3
 from datetime import datetime, timedelta
 
 _default_db_path = os.path.join(os.path.dirname(__file__), "users.db")

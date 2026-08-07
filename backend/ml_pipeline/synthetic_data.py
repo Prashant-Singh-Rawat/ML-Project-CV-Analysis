@@ -1,7 +1,8 @@
-import pandas as pd
-import numpy as np
-import random
 import os
+import random
+
+import numpy as np
+import pandas as pd
 
 # Define some domain knowledge parameters for the synthetic dataset
 SKILLS_DB = [

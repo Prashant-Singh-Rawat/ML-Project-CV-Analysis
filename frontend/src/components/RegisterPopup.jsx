@@ -88,8 +88,8 @@ const RegisterPopup = ({ isOpen, onClose, onAuthSuccess }) => {
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative w-full max-w-md p-8 bg-white border border-slate-200 shadow-2xl rounded-2xl">
+      <div className="flex min-h-full items-start justify-center p-4 md:py-12">
+        <div className="relative w-full max-w-md p-8 bg-white border border-slate-200 shadow-2xl rounded-2xl my-auto">
           {/* Close Button */}
           <button 
             onClick={onClose}

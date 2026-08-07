@@ -1,0 +1,10 @@
+Hi @TomHacker69, thank you for this excellent feature request! Comparing a resume to a LinkedIn profile is a great idea to ensure consistency.
+
+To implement this, we'll need to:
+1. **LinkedIn Data Ingestion**: Allow users to upload their exported LinkedIn PDF.
+2. **Text Extraction**: Use our existing NLP tools to parse the LinkedIn data.
+3. **Comparison Logic**: Create a new module that compares extracted entities (skills, experience, education).
+4. **UI Updates**: Build a side-by-side comparison view.
+5. **Export Option**: Generate a downloadable report summarizing the inconsistencies.
+
+This looks perfectly aligned with the project goals. I am assigning this issue to you. Please feel free to open a PR when you have an initial implementation!

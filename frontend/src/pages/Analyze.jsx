@@ -409,7 +409,7 @@ export default function Analyze() {
 
   // Fetch companies
   useEffect(() => {
-    api.get(`/companies`).then(r => setCompanies(r.data?.companies || FALLBACK_COMPANIES)).catch( => console.error());
+    api.get(`/companies`).then(r => setCompanies(r.data?.companies || FALLBACK_COMPANIES)).catch(err => console.error(err));
   }, []);
 
   // Handle analyze (upload path)
@@ -438,7 +438,7 @@ export default function Analyze() {
       const file = new File([blob], 'resume.pdf', { type: 'application/pdf' });
       const fd = new FormData();
       fd.append('cv_file', file);
-      fd.append('target_company', companies[0] || 'Google');
+      fd.append('target_company', FALLBACK_COMPANIES[0] || 'Google');
       fd.append('job_description', '');
       const res = await api.post(`/analyze`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       await saveAnalysisHistory(res.data, resumeData.name ? `${resumeData.name} resume` : 'Built resume');

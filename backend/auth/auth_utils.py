@@ -1,7 +1,8 @@
 import os
-from passlib.context import CryptContext
-from jose import JWTError, jwt
 from datetime import datetime, timedelta
+
+from jose import JWTError, jwt
+from passlib.context import CryptContext
 
 # ── Secret Key ──────────────────────────────────────────────────────────────
 # In production, set JWT_SECRET_KEY as an environment variable.

@@ -1,32 +1,76 @@
-import spacy
-import pdfplumber
 import io
-
-from typing import List, Dict
 import re
 
-import sys
-
-# Load small english model. If not installed, you can use fallbacks or install it.
-try:
-    nlp = spacy.load("en_core_web_sm")
-except OSError:
-    # If not found, download it or fallback to basic parsing
-    import subprocess
-
-    print("Downloading spaCy model 'en_core_web_sm'...")
-    subprocess.run([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
-    try:
-        nlp = spacy.load("en_core_web_sm")
-    except OSError:
-        # Final fallback to a blank model if all else fails
-        print("Failed to download model. Falling back to blank English model.")
-        nlp = spacy.blank("en")
+import pdfplumber
 
 from ml_pipeline.synthetic_data import SKILLS_DB
 
+# ── Known tech companies / organisations for lightweight NER ─────────────────
+_KNOWN_ORGS = [
+    "Google",
+    "Amazon",
+    "Microsoft",
+    "Meta",
+    "Apple",
+    "Netflix",
+    "Uber",
+    "Airbnb",
+    "Twitter",
+    "LinkedIn",
+    "Salesforce",
+    "Adobe",
+    "Oracle",
+    "IBM",
+    "Intel",
+    "NVIDIA",
+    "Qualcomm",
+    "Samsung",
+    "Sony",
+    "Accenture",
+    "Infosys",
+    "TCS",
+    "Wipro",
+    "HCL",
+    "Cognizant",
+    "Capgemini",
+    "Deloitte",
+    "McKinsey",
+    "BCG",
+    "Bain",
+    "JPMorgan",
+    "Goldman Sachs",
+    "Morgan Stanley",
+]
 
-def extract_skills(text: str) -> List[str]:
+_KNOWN_LOCS = [
+    "India",
+    "USA",
+    "United States",
+    "UK",
+    "United Kingdom",
+    "Germany",
+    "France",
+    "Canada",
+    "Australia",
+    "Singapore",
+    "Japan",
+    "China",
+    "Bangalore",
+    "Mumbai",
+    "Delhi",
+    "Hyderabad",
+    "Chennai",
+    "Pune",
+    "New York",
+    "San Francisco",
+    "London",
+    "Berlin",
+    "Seattle",
+    "Austin",
+]
+
+
+def extract_skills(text: str) -> list[str]:
     """
     Extracts skills from text based on a predefined skills taxonomy.
     Handles variations like 'NodeJS' vs 'Node.js' and ensures word boundaries.
@@ -36,31 +80,43 @@ def extract_skills(text: str) -> List[str]:
     found_skills = []
 
     for skill in SKILLS_DB:
-        # Standardize skill for comparison
         skill_clean = skill.lower().replace(".", " ").replace("-", " ")
         pattern = r"\b" + re.escape(skill_clean) + r"\b"
 
         if re.search(pattern, text_lower):
             found_skills.append(skill)
-        elif skill.lower() in text_lower:  # Fallback for non-word boundary cases
-            # Only add if it's a reasonably long string to avoid false positives (e.g., 'C' in 'CAT')
-            if len(skill) > 2:
-                found_skills.append(skill)
+        elif skill.lower() in text_lower and len(skill) > 2:
+            found_skills.append(skill)
 
     return list(set(found_skills))
 
 
-def extract_entities(text: str) -> Dict[str, List[str]]:
+def extract_entities(text: str) -> dict[str, list[str]]:
     """
-    Uses spacy to extract proper nouns, organizations, and other entities.
+    Lightweight regex-based entity extraction (no spacy dependency).
+    Detects known organisations, locations, and capitalised proper nouns.
     """
-    doc = nlp(text)
-    entities = {"ORG": [], "PERSON": [], "GPE": []}  # Locations
+    entities: dict[str, list[str]] = {"ORG": [], "PERSON": [], "GPE": []}
 
-    for ent in doc.ents:
-        if ent.label_ in entities.keys():
-            if ent.text not in entities[ent.label_]:
-                entities[ent.label_].append(ent.text)
+    # Match known orgs
+    for org in _KNOWN_ORGS:
+        if re.search(r"\b" + re.escape(org) + r"\b", text, re.IGNORECASE):
+            if org not in entities["ORG"]:
+                entities["ORG"].append(org)
+
+    # Match known locations
+    for loc in _KNOWN_LOCS:
+        if re.search(r"\b" + re.escape(loc) + r"\b", text, re.IGNORECASE):
+            if loc not in entities["GPE"]:
+                entities["GPE"].append(loc)
+
+    # Heuristic: two consecutive Title-Case words = likely a person name
+    person_pattern = re.compile(r"\b([A-Z][a-z]+ [A-Z][a-z]+)\b")
+    for match in person_pattern.findall(text):
+        # Exclude if it looks like a job title or organisation
+        if match not in entities["ORG"] and match not in entities["GPE"]:
+            if match not in entities["PERSON"]:
+                entities["PERSON"].append(match)
 
     return entities
 
@@ -78,18 +134,15 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
     return text
 
 
-def parse_cv_text(text: str) -> Dict[str, any]:
+def parse_cv_text(text: str) -> dict[str, any]:
     """
     Main parser function that takes raw CV text and returns parsed structured data.
     """
     skills = extract_skills(text)
     entities = extract_entities(text)
 
-    # Calculate text length metrics
-    doc = nlp(text)
-    word_count = len(
-        [token for token in doc if not token.is_punct and not token.is_space]
-    )
+    # Simple word count using split (no spacy needed)
+    word_count = len([w for w in re.split(r"\s+", text) if w.strip()])
 
     return {
         "skills": skills,
