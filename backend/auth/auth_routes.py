@@ -2,17 +2,24 @@ import os
 from datetime import datetime
 
 import httpx
-from fastapi import APIRouter, Header, HTTPException, Request
-from fastapi.responses import RedirectResponse
-from pydantic import BaseModel
-
-from . import auth_utils, user_db
+from . import user_db, auth_utils
+from main import limiter, RATE_AUTH
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 # ── Request / Response Models ─────────────────────────────────────────────────
 
+
+@router.post("/login")
+@limiter.limit(RATE_AUTH)
+async def login(request: Request, ...):
+    ...
+
+@router.post("/register")
+@limiter.limit(RATE_AUTH)
+async def register(request: Request, ...):
+    ...
 
 class RegisterRequest(BaseModel):
     email: str
