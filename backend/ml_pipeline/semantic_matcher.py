@@ -9,8 +9,9 @@ semantic_matcher.py  —  CRASH-PROOF BERT semantic skill matching
 The website will NEVER crash because of this module.
 """
 
-import numpy as np
 import logging
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 

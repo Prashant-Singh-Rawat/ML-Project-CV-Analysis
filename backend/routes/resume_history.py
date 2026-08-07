@@ -1,9 +1,9 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
-from typing import Any, Dict, Optional
 import re
+from typing import Any
 
 from auth import resume_history_db
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/resume-history", tags=["Resume History"])
 
@@ -63,8 +63,8 @@ KNOWN_RESUME_SKILLS = [
 
 class ResumeHistoryCreateRequest(BaseModel):
     user_id: int
-    resume_name: Optional[str] = None
-    analysis_result: Dict[str, Any]
+    resume_name: str | None = None
+    analysis_result: dict[str, Any]
 
 
 class ResumeHistoryCompareRequest(BaseModel):

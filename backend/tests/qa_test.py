@@ -1,5 +1,6 @@
-import sys
+# ruff: noqa: E402
 import os
+import sys
 
 # Add backend directory to sys.path
 backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -30,8 +31,8 @@ mock_st = sys.modules["sentence_transformers"]
 mock_util = MagicMock()
 mock_st.util = mock_util
 
-from ml_pipeline.semantic_matcher import semantic_skill_match
 from ml_pipeline import semantic_matcher
+from ml_pipeline.semantic_matcher import semantic_skill_match
 
 
 # Helper classes for matrix representation
@@ -152,7 +153,7 @@ for idx, case in enumerate(test_cases, 1):
     print(f"\nTest Case #{idx}:")
     print(f"  Candidate Skill  : {cand}")
     print(f"  Required Skill   : {req}")
-    print(f"  -------------------------------------------------------------")
+    print("  -------------------------------------------------------------")
     print(f"  Old Keyword Match: Matched: {exact_matched} | Score: {exact_pct:.1f}%")
     print(
         f"  New Semantic Match: Matched: {sem_matched} | Score: {sem_pct:.1f}% | Similarity: {confidence}% (Engine: {engine})"

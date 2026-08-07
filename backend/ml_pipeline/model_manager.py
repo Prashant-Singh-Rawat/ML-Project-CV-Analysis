@@ -1,18 +1,19 @@
 import os
-import pandas as pd
+
 import joblib
+import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, accuracy_score
-from ml_pipeline.synthetic_data import (
-    COMPANY_REQUIREMENTS,
-    generate_synthetic_data,
-    COMPANIES,
-)
 
 # ── BERT Semantic Matcher ───────────────────────────────────────────────────
 # Import lazily — the model only loads into RAM when first needed
 from ml_pipeline.semantic_matcher import semantic_skill_match
+from ml_pipeline.synthetic_data import (
+    COMPANIES,
+    COMPANY_REQUIREMENTS,
+    generate_synthetic_data,
+)
 
 
 class ModelManager:

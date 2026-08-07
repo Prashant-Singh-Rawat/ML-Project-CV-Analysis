@@ -1,11 +1,9 @@
-import spacy
-import pdfplumber
 import io
-
-from typing import List, Dict
 import re
-
 import sys
+
+import pdfplumber
+import spacy
 
 # Load small english model. If not installed, you can use fallbacks or install it.
 try:
@@ -26,7 +24,7 @@ except OSError:
 from ml_pipeline.synthetic_data import SKILLS_DB
 
 
-def extract_skills(text: str) -> List[str]:
+def extract_skills(text: str) -> list[str]:
     """
     Extracts skills from text based on a predefined skills taxonomy.
     Handles variations like 'NodeJS' vs 'Node.js' and ensures word boundaries.
@@ -50,7 +48,7 @@ def extract_skills(text: str) -> List[str]:
     return list(set(found_skills))
 
 
-def extract_entities(text: str) -> Dict[str, List[str]]:
+def extract_entities(text: str) -> dict[str, list[str]]:
     """
     Uses spacy to extract proper nouns, organizations, and other entities.
     """
@@ -58,7 +56,7 @@ def extract_entities(text: str) -> Dict[str, List[str]]:
     entities = {"ORG": [], "PERSON": [], "GPE": []}  # Locations
 
     for ent in doc.ents:
-        if ent.label_ in entities.keys():
+        if ent.label_ in entities:
             if ent.text not in entities[ent.label_]:
                 entities[ent.label_].append(ent.text)
 
@@ -78,7 +76,7 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
     return text
 
 
-def parse_cv_text(text: str) -> Dict[str, any]:
+def parse_cv_text(text: str) -> dict[str, any]:
     """
     Main parser function that takes raw CV text and returns parsed structured data.
     """

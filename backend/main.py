@@ -1,29 +1,25 @@
-from fastapi import FastAPI, HTTPException, File, UploadFile, Form
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Optional
-import re
-import random
 import asyncio
 import os
+import random
+import re
 import urllib.request
-from fastapi.responses import JSONResponse
-
-from utils.logger import logger
-from utils.middleware import RequestIDMiddleware, TimingMiddleware
-
-from utils.cv_parser import parse_cv_text, extract_text_from_pdf
-from ml_pipeline.model_manager import ModelManager
-from ml_pipeline.synthetic_data import COMPANIES
-from ml_pipeline.semantic_matcher import semantic_skill_match
 
 # Auth
 from auth import resume_history_db
 from auth import user_db as auth_db
 from auth.auth_routes import router as auth_router
-
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from ml_pipeline.model_manager import ModelManager
+from ml_pipeline.semantic_matcher import semantic_skill_match
+from ml_pipeline.synthetic_data import COMPANIES
+from pydantic import BaseModel
 from routes.features import router as features_router
 from routes.resume_history import router as resume_history_router
+from utils.cv_parser import extract_text_from_pdf, parse_cv_text
+from utils.logger import logger
+from utils.middleware import RequestIDMiddleware, TimingMiddleware
 
 app = FastAPI(title="TonyCV API", version="2.0.0")
 
@@ -270,16 +266,16 @@ class AnalysisResponse(BaseModel):
     placement_probability: float
     placement_status: str
     skill_match_pct: float
-    matched_skills: List[str]
-    missing_skills: List[str]
+    matched_skills: list[str]
+    missing_skills: list[str]
     extracted_entities: dict
     cv_text: str
-    keyword_highlights: List[dict]
-    github_analysis: Optional[List[dict]] = None
-    market_pulse_adjustments: Optional[dict] = None
-    hiring_analysis: Optional[dict] = None
-    experience_level: Optional[str] = None
-    match_details: Optional[List[dict]] = None
+    keyword_highlights: list[dict]
+    github_analysis: list[dict] | None = None
+    market_pulse_adjustments: dict | None = None
+    hiring_analysis: dict | None = None
+    experience_level: str | None = None
+    match_details: list[dict] | None = None
 
 
 async def keep_alive_task():
@@ -366,10 +362,10 @@ async def get_market_pulse():
 @app.post("/analyze", response_model=AnalysisResponse)
 async def analyze_cv(
     cv_file: UploadFile = File(...),
-    cgpa: Optional[float] = Form(None),
-    target_company: Optional[str] = Form(None),
-    github_url: Optional[str] = Form(""),
-    experience_level: Optional[str] = Form("fresher"),
+    cgpa: float | None = Form(None),
+    target_company: str | None = Form(None),
+    github_url: str | None = Form(""),
+    experience_level: str | None = Form("fresher"),
 ):
     # 1. Read and Parse the CV PDF
     if not cv_file.filename.endswith(".pdf"):
@@ -392,7 +388,7 @@ async def analyze_cv(
             "PDF Parsing Error",
             extra={"error": str(e), "cv_filename": cv_file.filename},
         )
-        raise HTTPException(status_code=500, detail=f"Failed to read PDF: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to read PDF: {e!s}")
 
     if not cv_text.strip():
         raise HTTPException(

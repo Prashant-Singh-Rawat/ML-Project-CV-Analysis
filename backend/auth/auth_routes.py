@@ -1,11 +1,12 @@
-from fastapi import APIRouter, HTTPException, Header, Request
+import os
+from datetime import datetime
+
+import httpx
+from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime
-import os
-import httpx
-from . import user_db, auth_utils
+
+from . import auth_utils, user_db
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -18,8 +19,8 @@ class RegisterRequest(BaseModel):
     name: str
     password: str
     device_fingerprint: str
-    phone: Optional[str] = None
-    updates_enabled: Optional[bool] = True
+    phone: str | None = None
+    updates_enabled: bool | None = True
 
 
 class LoginRequest(BaseModel):
@@ -40,8 +41,8 @@ class UserResponse(BaseModel):
     id: int
     email: str
     name: str
-    phone: Optional[str] = None
-    updates_enabled: Optional[bool] = True
+    phone: str | None = None
+    updates_enabled: bool | None = True
 
 
 class TokenResponse(BaseModel):
@@ -137,7 +138,7 @@ async def register(req: RegisterRequest):
 
 class UpdateSettingsRequest(BaseModel):
     email: str
-    phone: Optional[str] = None
+    phone: str | None = None
     updates_enabled: bool
 
 

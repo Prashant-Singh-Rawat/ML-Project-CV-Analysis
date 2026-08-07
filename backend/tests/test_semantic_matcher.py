@@ -1,5 +1,7 @@
+# ruff: noqa: E402
 import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
+
 import numpy as np
 
 # Mock third-party dependencies to allow importing modules without them installed
@@ -20,8 +22,8 @@ for module_name in [
 mock_util = MagicMock()
 sys.modules["sentence_transformers"].util = mock_util
 
-from ml_pipeline.semantic_matcher import semantic_skill_match, _keyword_fallback
 from ml_pipeline import semantic_matcher
+from ml_pipeline.semantic_matcher import semantic_skill_match
 
 
 # Helper classes for matrix representation without torch

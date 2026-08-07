@@ -3,8 +3,8 @@ Minimal health-check test for CI pipeline.
 Zero ML dependencies - only fastapi + pytest needed.
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -12,8 +12,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 def test_health_check():
     """Verify /health endpoint returns status ok."""
     try:
-        from main import app
         from fastapi.testclient import TestClient
+        from main import app
 
         client = TestClient(app)
         response = client.get("/health")

@@ -2,16 +2,16 @@
 # In a true deployment, this script would be used offline to extract advanced embeddings.
 
 try:
-    from tensorflow.keras.models import Sequential
     from tensorflow.keras.layers import (
-        Embedding,
         LSTM,
-        Dense,
         Conv1D,
+        Dense,
+        Embedding,
         MaxPooling1D,
     )
-    from tensorflow.keras.preprocessing.text import Tokenizer
+    from tensorflow.keras.models import Sequential
     from tensorflow.keras.preprocessing.sequence import pad_sequences
+    from tensorflow.keras.preprocessing.text import Tokenizer
 except ImportError:
     pass
 

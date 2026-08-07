@@ -1,5 +1,6 @@
-import sys
+# ruff: noqa: E402
 import os
+import sys
 
 # Add backend directory to sys.path
 backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
