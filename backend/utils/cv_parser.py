@@ -134,18 +134,26 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
     return text
 
 
+from ml_pipeline.knowledge_graph import get_skill_knowledge_graph
+
 def parse_cv_text(text: str) -> dict[str, any]:
     """
     Main parser function that takes raw CV text and returns parsed structured data.
     """
     skills = extract_skills(text)
     entities = extract_entities(text)
+    debiased_text = redact_pii(text, entities)
+    
+    # Infer implicit skills using Knowledge Graph
+    kg = get_skill_knowledge_graph()
+    implicit_skills = kg.infer_implicit_skills(skills)
 
     # Simple word count using split (no spacy needed)
     word_count = len([w for w in re.split(r"\s+", text) if w.strip()])
 
     return {
         "skills": skills,
+        "implicit_skills": implicit_skills,
         "organizations": entities["ORG"],
         "persons": entities["PERSON"],
         "locations": entities["GPE"],
