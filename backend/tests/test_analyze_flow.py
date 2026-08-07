@@ -21,7 +21,7 @@ def test_analyze_flow_success():
     pdf_path = os.path.join(os.path.dirname(__file__), "dummy_resume.pdf")
     with open(pdf_path, "rb") as f:
         pdf_bytes = f.read()
-    
+
     # Send request to /analyze
     files = {"cv_file": ("resume.pdf", pdf_bytes, "application/pdf")}
     data = {

@@ -12,7 +12,7 @@ for module_name in [
     "jose",
     "jose.jwt",
     "pythonjsonlogger",
-    "sentence_transformers"
+    "sentence_transformers",
 ]:
     sys.modules[module_name] = MagicMock()
 
@@ -22,6 +22,7 @@ sys.modules["sentence_transformers"].util = mock_util
 
 from ml_pipeline.semantic_matcher import semantic_skill_match, _keyword_fallback
 from ml_pipeline import semantic_matcher
+
 
 # Helper classes for matrix representation without torch
 class RowMock:
@@ -34,6 +35,7 @@ class RowMock:
     def numpy(self):
         return self.scores
 
+
 class MatrixMock:
     def __init__(self, matrix):
         self.matrix = [RowMock(row) for row in matrix]
@@ -41,12 +43,17 @@ class MatrixMock:
     def __getitem__(self, idx):
         return self.matrix[idx]
 
+
 SIMILARITY_MAP = {
     ("backend development", "built scalable backend apis using fastapi"): 0.85,
     ("backend engineering", "developed python microservices"): 0.90,
-    ("machine learning", "developed predictive models using python and scikit-learn"): 0.88,
+    (
+        "machine learning",
+        "developed predictive models using python and scikit-learn",
+    ): 0.88,
     ("database administration", "designed responsive ui using react"): 0.15,
 }
+
 
 def get_similarity(req, cand):
     req_l = req.lower().strip()
@@ -54,6 +61,7 @@ def get_similarity(req, cand):
     if req_l == cand_l:
         return 1.0
     return SIMILARITY_MAP.get((req_l, cand_l), 0.1)
+
 
 def mock_cos_sim(req_emb, cand_emb):
     matrix = []
@@ -64,8 +72,10 @@ def mock_cos_sim(req_emb, cand_emb):
         matrix.append(row)
     return MatrixMock(matrix)
 
+
 # Configure the mock utils
 mock_util.cos_sim.side_effect = mock_cos_sim
+
 
 def setup_mock_model():
     model_mock = MagicMock()
@@ -76,10 +86,10 @@ def setup_mock_model():
 
 def test_exact_skill_matches():
     setup_mock_model()
-    
+
     candidate = ["Python", "React"]
     required = ["Python", "SQL"]
-    
+
     result = semantic_skill_match(candidate, required)
     assert result["engine"] == "bert"
     assert "Python" in result["matched_skills"]
@@ -89,10 +99,10 @@ def test_exact_skill_matches():
 
 def test_semantically_similar_skills():
     setup_mock_model()
-    
+
     candidate = ["Built scalable backend APIs using FastAPI"]
     required = ["Backend Development"]
-    
+
     result = semantic_skill_match(candidate, required, similarity_threshold=0.55)
     assert result["engine"] == "bert"
     assert "Backend Development" in result["matched_skills"]
@@ -101,10 +111,10 @@ def test_semantically_similar_skills():
 
 def test_clearly_unrelated_skills():
     setup_mock_model()
-    
+
     candidate = ["Designed responsive UI using React"]
     required = ["Database Administration"]
-    
+
     result = semantic_skill_match(candidate, required, similarity_threshold=0.55)
     assert result["engine"] == "bert"
     assert "Database Administration" in result["missing_skills"]
@@ -113,7 +123,7 @@ def test_clearly_unrelated_skills():
 
 def test_empty_candidate_skills():
     setup_mock_model()
-    
+
     result = semantic_skill_match([], ["Python"])
     assert result["skill_match_pct"] == 0.0
     assert result["missing_skills"] == ["Python"]
@@ -121,7 +131,7 @@ def test_empty_candidate_skills():
 
 def test_empty_required_skills():
     setup_mock_model()
-    
+
     result = semantic_skill_match(["Python"], [])
     assert result["skill_match_pct"] == 75.0
     assert result["matched_skills"] == []
@@ -129,11 +139,11 @@ def test_empty_required_skills():
 
 def test_duplicate_skills_handling():
     setup_mock_model()
-    
+
     # Duplicate required and candidate skills
     candidate = ["Python", "Python", "React"]
     required = ["Python", "SQL", "SQL"]
-    
+
     result = semantic_skill_match(candidate, required)
     assert result["engine"] == "bert"
     assert "Python" in result["matched_skills"]
@@ -146,7 +156,7 @@ def test_model_load_failure_fallback():
     # Force _get_model to fail (return None)
     semantic_matcher._model = None
     semantic_matcher._model_ok = False
-    
+
     result = semantic_skill_match(["Python"], ["Python", "SQL"])
     assert result["engine"] == "keyword"
     assert result["skill_match_pct"] == 50.0
@@ -154,10 +164,10 @@ def test_model_load_failure_fallback():
 
 def test_model_inference_failure_fallback():
     setup_mock_model()
-    
+
     # Force encode to raise an exception
     semantic_matcher._model.encode.side_effect = RuntimeError("Inference error")
-    
+
     result = semantic_skill_match(["Python"], ["Python", "SQL"])
     assert result["engine"] == "keyword"
     assert result["skill_match_pct"] == 50.0
@@ -166,21 +176,27 @@ def test_model_inference_failure_fallback():
 def test_final_candidate_matching_influenced():
     # Verify that compute_hiring_analysis is influenced by semantic matching
     from main import compute_hiring_analysis
-    
+
     setup_mock_model()
-    
+
     # candidate has "Developed predictive models using Python and scikit-learn"
     # for "Data Scientist" job category which has "Machine Learning" required
     # Without semantic match, it would not match. With semantic match, it should.
-    
-    candidate = ["Developed predictive models using Python and scikit-learn", "Python", "SQL"]
-    
+
+    candidate = [
+        "Developed predictive models using Python and scikit-learn",
+        "Python",
+        "SQL",
+    ]
+
     # Let's compute hiring analysis
     res = compute_hiring_analysis(candidate, 8.0, "experienced")
-    
+
     # Let's find "Data Scientist" or "ML Engineer" role
-    data_scientist_role = next(r for r in res["job_analysis"] if r["role"] == "Data Scientist")
-    
+    data_scientist_role = next(
+        r for r in res["job_analysis"] if r["role"] == "Data Scientist"
+    )
+
     # "Machine Learning" is a required skill for Data Scientist
     # Let's assert it is in matched_skills
     assert "Machine Learning" in data_scientist_role["matched_skills"]

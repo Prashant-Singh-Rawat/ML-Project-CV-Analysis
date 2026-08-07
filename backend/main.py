@@ -198,8 +198,10 @@ def compute_hiring_analysis(candidate_skills, cgpa, experience_level):
 
     for role, config in JOB_CATEGORIES.items():
         req_skills = config["skills"]
-        
-        sem_res = semantic_skill_match(candidate_skills, req_skills, similarity_threshold=0.55)
+
+        sem_res = semantic_skill_match(
+            candidate_skills, req_skills, similarity_threshold=0.55
+        )
         skill_match = sem_res["skill_match_pct"]
         matched_display = sem_res["matched_skills"]
         missing_display = sem_res["missing_skills"]
@@ -230,7 +232,6 @@ def compute_hiring_analysis(candidate_skills, cgpa, experience_level):
             recommendation = "Moderate Fit"
         else:
             recommendation = "Needs Improvement"
-
 
         results.append(
             {
@@ -388,7 +389,8 @@ async def analyze_cv(
         )
     except Exception as e:
         logger.error(
-            "PDF Parsing Error", extra={"error": str(e), "cv_filename": cv_file.filename}
+            "PDF Parsing Error",
+            extra={"error": str(e), "cv_filename": cv_file.filename},
         )
         raise HTTPException(status_code=500, detail=f"Failed to read PDF: {str(e)}")
 

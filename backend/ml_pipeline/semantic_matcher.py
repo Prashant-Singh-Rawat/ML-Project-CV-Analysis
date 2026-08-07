@@ -72,12 +72,14 @@ def _keyword_fallback(candidate_skills: list, required_skills: list) -> dict:
                     break
             if not best_skill:
                 best_skill = r
-        details.append({
-            "required": r,
-            "best_match": best_skill,
-            "confidence": 100.0 if is_matched else 0.0,
-            "matched": is_matched,
-        })
+        details.append(
+            {
+                "required": r,
+                "best_match": best_skill,
+                "confidence": 100.0 if is_matched else 0.0,
+                "matched": is_matched,
+            }
+        )
     return {
         "matched_skills": matched,
         "missing_skills": missing,
@@ -162,14 +164,14 @@ def semantic_skill_match(
 
         for i, req in enumerate(required_skills):
             scores = cos[i].cpu().numpy()
-            
+
             # Check for exact case-insensitive match first (force 100% match)
             exact_idx = None
             for idx, cand in enumerate(candidate_skills):
                 if req.lower() == cand.lower():
                     exact_idx = idx
                     break
-            
+
             if exact_idx is not None:
                 best_idx = exact_idx
                 best_score = 1.0
@@ -204,7 +206,6 @@ def semantic_skill_match(
         # ── Layer 3: catch-all — fall through to keyword ─────
         logger.error(f"[BERT] Inference failed, using keyword fallback: {exc}")
         return _keyword_fallback(candidate_skills, required_skills)
-
 
 
 if __name__ == "__main__":

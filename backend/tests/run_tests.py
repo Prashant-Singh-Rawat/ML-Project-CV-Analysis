@@ -25,12 +25,13 @@ for test in tests:
         # Reset matcher globals before each test to ensure clean state
         test_semantic_matcher.semantic_matcher._model = None
         test_semantic_matcher.semantic_matcher._model_ok = None
-        
+
         test()
         print(f"PASS: {test.__name__}")
     except Exception as e:
         print(f"FAIL: {test.__name__} - {e}")
         import traceback
+
         traceback.print_exc()
         failed += 1
 
