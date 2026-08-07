@@ -24,28 +24,62 @@ except OSError:
 from ml_pipeline.synthetic_data import SKILLS_DB
 
 
+from transformers import pipeline
+
+# Load RoBERTa NER pipeline for skill extraction (lazy loading to save memory on startup)
+_roberta_ner_pipeline = None
+
+def get_roberta_pipeline():
+    global _roberta_ner_pipeline
+    if _roberta_ner_pipeline is None:
+        try:
+            # Using a generic RoBERTa NER model; in production, this would be a fine-tuned model for skills
+            _roberta_ner_pipeline = pipeline("ner", model="Jean-Baptiste/roberta-large-ner-english", aggregation_strategy="simple")
+        except Exception as e:
+            print(f"Error loading RoBERTa pipeline: {e}")
+            _roberta_ner_pipeline = False
+    return _roberta_ner_pipeline
+
 def extract_skills(text: str) -> list[str]:
     """
-    Extracts skills from text based on a predefined skills taxonomy.
+    Extracts skills from text based on a predefined skills taxonomy and RoBERTa NER pipeline.
     Handles variations like 'NodeJS' vs 'Node.js' and ensures word boundaries.
     """
     text_processed = text.replace(".", " ").replace("/", " ").replace("-", " ")
     text_lower = text_processed.lower()
-    found_skills = []
+    found_skills = set()
 
+    # 1. Regex/Taxonomy based extraction (fast path)
     for skill in SKILLS_DB:
-        # Standardize skill for comparison
         skill_clean = skill.lower().replace(".", " ").replace("-", " ")
         pattern = r"\b" + re.escape(skill_clean) + r"\b"
-
         if re.search(pattern, text_lower):
-            found_skills.append(skill)
-        elif skill.lower() in text_lower:  # Fallback for non-word boundary cases
-            # Only add if it's a reasonably long string to avoid false positives (e.g., 'C' in 'CAT')
+            found_skills.add(skill)
+        elif skill.lower() in text_lower:
             if len(skill) > 2:
-                found_skills.append(skill)
+                found_skills.add(skill)
+                
+    # 2. RoBERTa NER based extraction (advanced semantic path)
+    ner_pipe = get_roberta_pipeline()
+    if ner_pipe:
+        try:
+            # Truncate text to avoid exceeding max sequence length of RoBERTa (usually 512 tokens)
+            # A simple character truncation as approximation
+            truncated_text = text[:2000]
+            ner_results = ner_pipe(truncated_text)
+            
+            for entity in ner_results:
+                # Typically skills might be recognized under various entity types depending on the model,
+                # e.g., 'MISC' or custom 'SKILL' tags in a fine-tuned model.
+                if entity['entity_group'] in ['MISC', 'ORG', 'SKILL']:
+                    extracted_word = entity['word'].strip()
+                    if len(extracted_word) > 2 and extracted_word.lower() not in [s.lower() for s in found_skills]:
+                        # Optional: check against an expanded dictionary or just accept as candidate skill
+                        found_skills.add(extracted_word)
+        except Exception as e:
+            print(f"RoBERTa NER extraction failed: {e}")
 
-    return list(set(found_skills))
+    return list(found_skills)
 
 
 def extract_entities(text: str) -> dict[str, list[str]]:
