@@ -4,8 +4,9 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
-  // Automatically use repo name for GitHub Pages deploy, or '/' for localhost
-  base: process.env.GITHUB_ACTIONS ? '/ML-Project-CV-Analysis/' : '/',
+  // GitHub Actions CI: use repo-scoped base for GitHub Pages
+  // Netlify / localhost: use root '/'
+  base: (process.env.GITHUB_ACTIONS && !process.env.NETLIFY) ? '/ML-Project-CV-Analysis/' : '/',
   plugins: [react()],
   cacheDir: '.vite_cache',
   server: {
