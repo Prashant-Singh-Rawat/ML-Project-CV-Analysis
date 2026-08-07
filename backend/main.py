@@ -15,6 +15,7 @@ from utils.middleware import RequestIDMiddleware, TimingMiddleware
 from utils.cv_parser import parse_cv_text, extract_text_from_pdf
 from ml_pipeline.model_manager import ModelManager
 from ml_pipeline.synthetic_data import COMPANIES
+from ml_pipeline.semantic_matcher import semantic_skill_match
 
 # Auth
 from auth import resume_history_db
@@ -198,10 +199,11 @@ def compute_hiring_analysis(candidate_skills, cgpa, experience_level):
 
     for role, config in JOB_CATEGORIES.items():
         req_skills = config["skills"]
-        matched = set(s.lower() for s in candidate_skills).intersection(
-            set(s.lower() for s in req_skills)
-        )
-        skill_match = (len(matched) / len(req_skills)) * 100 if req_skills else 50
+        
+        sem_res = semantic_skill_match(candidate_skills, req_skills, similarity_threshold=0.55)
+        skill_match = sem_res["skill_match_pct"]
+        matched_display = sem_res["matched_skills"]
+        missing_display = sem_res["missing_skills"]
 
         # Experience weight
         exp_weight = config["weights"].get(exp_key, 0.5)
@@ -230,16 +232,6 @@ def compute_hiring_analysis(candidate_skills, cgpa, experience_level):
         else:
             recommendation = "Needs Improvement"
 
-        matched_display = [
-            s
-            for s in req_skills
-            if s.lower() in set(sk.lower() for sk in candidate_skills)
-        ]
-        missing_display = [
-            s
-            for s in req_skills
-            if s.lower() not in set(sk.lower() for sk in candidate_skills)
-        ]
 
         results.append(
             {

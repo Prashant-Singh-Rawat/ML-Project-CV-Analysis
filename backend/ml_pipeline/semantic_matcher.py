@@ -60,15 +60,24 @@ def _keyword_fallback(candidate_skills: list, required_skills: list) -> dict:
     matched = [r for r in required_skills if r.lower() in cand_lower]
     missing = [r for r in required_skills if r.lower() not in cand_lower]
     pct = (len(matched) / len(required_skills) * 100) if required_skills else 75.0
-    details = [
-        {
+    details = []
+    for r in required_skills:
+        is_matched = r.lower() in cand_lower
+        best_skill = None
+        if is_matched:
+            # Find candidate skill matching the casing
+            for s in candidate_skills:
+                if s.lower() == r.lower():
+                    best_skill = s
+                    break
+            if not best_skill:
+                best_skill = r
+        details.append({
             "required": r,
-            "best_match": r if r in matched else None,
-            "confidence": 100.0 if r in matched else 0.0,
-            "matched": r in matched,
-        }
-        for r in required_skills
-    ]
+            "best_match": best_skill,
+            "confidence": 100.0 if is_matched else 0.0,
+            "matched": is_matched,
+        })
     return {
         "matched_skills": matched,
         "missing_skills": missing,
@@ -92,6 +101,28 @@ def semantic_skill_match(
 
     NEVER raises — always returns a valid result even if BERT fails.
     """
+    # ── Input cleaning & deduplication preserving order ──────
+    cleaned_cand = []
+    seen_cand = set()
+    for s in candidate_skills:
+        if isinstance(s, str):
+            s_clean = s.strip()
+            if s_clean and s_clean.lower() not in seen_cand:
+                cleaned_cand.append(s_clean)
+                seen_cand.add(s_clean.lower())
+
+    cleaned_req = []
+    seen_req = set()
+    for s in required_skills:
+        if isinstance(s, str):
+            s_clean = s.strip()
+            if s_clean and s_clean.lower() not in seen_req:
+                cleaned_req.append(s_clean)
+                seen_req.add(s_clean.lower())
+
+    candidate_skills = cleaned_cand
+    required_skills = cleaned_req
+
     # ── Edge cases ───────────────────────────────────────────
     if not required_skills:
         return {
@@ -131,10 +162,24 @@ def semantic_skill_match(
 
         for i, req in enumerate(required_skills):
             scores = cos[i].cpu().numpy()
-            best_idx = int(np.argmax(scores))
-            best_score = float(scores[best_idx])
-            best_skill = candidate_skills[best_idx]
-            is_match = best_score >= similarity_threshold
+            
+            # Check for exact case-insensitive match first (force 100% match)
+            exact_idx = None
+            for idx, cand in enumerate(candidate_skills):
+                if req.lower() == cand.lower():
+                    exact_idx = idx
+                    break
+            
+            if exact_idx is not None:
+                best_idx = exact_idx
+                best_score = 1.0
+                best_skill = candidate_skills[exact_idx]
+                is_match = True
+            else:
+                best_idx = int(np.argmax(scores))
+                best_score = float(scores[best_idx])
+                best_skill = candidate_skills[best_idx]
+                is_match = best_score >= similarity_threshold
 
             (matched if is_match else missing).append(req)
             details.append(
@@ -159,6 +204,7 @@ def semantic_skill_match(
         # ── Layer 3: catch-all — fall through to keyword ─────
         logger.error(f"[BERT] Inference failed, using keyword fallback: {exc}")
         return _keyword_fallback(candidate_skills, required_skills)
+
 
 
 if __name__ == "__main__":
