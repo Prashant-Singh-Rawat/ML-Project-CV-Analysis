@@ -114,7 +114,7 @@ async def health_ready():
     """Readiness probe — confirms application is ready for business requests."""
     db_ok = True
     try:
-        auth_db.get_db_connection().close()
+        auth_db.get_connection().close()
     except Exception:
         db_ok = False
 

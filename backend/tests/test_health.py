@@ -58,6 +58,8 @@ def test_health_ready():
         data = response.json()
         assert "status" in data
         assert "database" in data
+        assert data["database"] == "connected"
+        assert data["status"] == "ready"
     except ImportError as e:
         print(f"[CI-SKIP] Heavy ML deps not in CI env: {e}")
 
