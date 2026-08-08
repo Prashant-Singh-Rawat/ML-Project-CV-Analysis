@@ -64,40 +64,123 @@ function ScrollToTopButton() {
 /* ── Dropdown menu helper ── */
 function NavDropdown({ label, items }) {
   const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const ref = useRef(null);
+  const buttonRef = useRef(null);
+  const itemRefs = useRef([]);
+  const menuId = `nav-menu-${label.toLowerCase().replace(/\s+/g, '-')}`;
   const navigate = useNavigate();
 
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false);
+        setActiveIndex(-1);
+      }
+    };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  useEffect(() => {
+    if (open && activeIndex >= 0) {
+      itemRefs.current[activeIndex]?.focus();
+    }
+  }, [open, activeIndex]);
+
+  const closeMenu = (restoreFocus = true) => {
+    setOpen(false);
+    setActiveIndex(-1);
+    if (restoreFocus) buttonRef.current?.focus();
+  };
+
+  const openMenu = (index = 0) => {
+    setOpen(true);
+    setActiveIndex(index);
+  };
+
+  const onTriggerKeyDown = (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openMenu(0);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      openMenu(items.length - 1);
+    } else if (e.key === 'Escape') {
+      closeMenu();
+    }
+  };
+
+  const onMenuKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeMenu(true);
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex((i) => (i + 1) % items.length);
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex((i) => (i - 1 + items.length) % items.length);
+      return;
+    }
+    if (e.key === 'Home') {
+      e.preventDefault();
+      setActiveIndex(0);
+      return;
+    }
+    if (e.key === 'End') {
+      e.preventDefault();
+      setActiveIndex(items.length - 1);
+      return;
+    }
+    if (e.key === 'Tab') {
+      closeMenu(false);
+    }
+  };
+
   return (
     <div ref={ref} className="relative">
       <button
-        onClick={() => setOpen(o => !o)}
+        ref={buttonRef}
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={menuId}
+        onClick={() => (open ? closeMenu(false) : openMenu(0))}
+        onKeyDown={onTriggerKeyDown}
         className="flex items-center gap-1 hover:text-blue-600 transition-colors font-semibold text-sm text-slate-600"
       >
         {label}
-        <FiChevronDown size={13} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+        <FiChevronDown size={13} className={`transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
       </button>
       <AnimatePresence>
         {open && (
           <motion.div
+            id={menuId}
+            role="menu"
+            aria-label={label}
             initial={{ opacity: 0, y: 8, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.97 }}
             transition={{ duration: 0.15 }}
+            onKeyDown={onMenuKeyDown}
             className="absolute top-full left-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden min-w-[200px] z-50"
           >
-            {items.map((item) => (
+            {items.map((item, index) => (
               <button
                 key={item.label}
-                onClick={() => { navigate(item.to); setOpen(false); }}
-                className="w-full text-left px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-3"
+                ref={(el) => { itemRefs.current[index] = el; }}
+                type="button"
+                role="menuitem"
+                tabIndex={activeIndex === index ? 0 : -1}
+                onClick={() => { navigate(item.to); closeMenu(false); }}
+                className="w-full text-left px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-3 focus:bg-blue-50 focus:text-blue-700 focus:outline-none"
               >
-                {item.icon && <span className="text-base">{item.icon}</span>}
+                {item.icon && <span className="text-base" aria-hidden="true">{item.icon}</span>}
                 <span>{item.label}</span>
               </button>
             ))}
@@ -223,10 +306,14 @@ function Navbar({ user, onLogout, onOpenRegister }) {
 
           {/* Mobile hamburger */}
           <button
+            type="button"
             onClick={() => setMobileOpen(o => !o)}
             className="lg:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 transition"
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-primary-nav"
           >
-            {mobileOpen ? <FiX size={20} /> : <FiMenu size={20} />}
+            {mobileOpen ? <FiX size={20} aria-hidden="true" /> : <FiMenu size={20} aria-hidden="true" />}
           </button>
         </div>
       </div>
@@ -235,6 +322,7 @@ function Navbar({ user, onLogout, onOpenRegister }) {
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
+            id="mobile-primary-nav"
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
