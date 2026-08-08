@@ -23,7 +23,7 @@ const healthClient = axios.create({
     (window.location.hostname === 'localhost' ||
       window.location.hostname === '127.0.0.1')
       ? 'http://localhost:8000'
-      : 'https://tonycv-backend.onrender.com'),
+      : 'https://ml-project-cv-analysis.onrender.com'),
   timeout: 15000, // 15 s per health check attempt
 });
 

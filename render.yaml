@@ -21,7 +21,7 @@ services:
         value: "https://tonyaicv.netlify.app"
       # Used by the keep-alive self-ping task inside main.py.
       - key: RENDER_EXTERNAL_URL
-        value: "https://tonycv-backend.onrender.com"
+        value: "https://ml-project-cv-analysis.onrender.com"
       # Environment label surfaced in /health response.
       - key: RENDER_ENV
         value: "production"

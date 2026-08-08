@@ -29,7 +29,7 @@ const API_BASE_URL =
   (window.location.hostname === 'localhost' ||
     window.location.hostname === '127.0.0.1')
     ? 'http://localhost:8000'
-    : 'https://tonycv-backend.onrender.com');
+    : 'https://ml-project-cv-analysis.onrender.com');
 
 // ── Axios instance ─────────────────────────────────────────────────────────
 // 180s timeout covers the full /analyze processing time.

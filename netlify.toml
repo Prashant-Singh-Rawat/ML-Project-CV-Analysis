@@ -4,7 +4,7 @@
   publish = "dist"
 
 [build.environment]
-  VITE_API_URL = "https://tonycv-backend.onrender.com"
+  VITE_API_URL = "https://ml-project-cv-analysis.onrender.com"
   NODE_VERSION = "20"
 
 # Redirect all routes to index.html for React Router (SPA)
