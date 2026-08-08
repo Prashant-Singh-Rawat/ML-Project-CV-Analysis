@@ -51,7 +51,7 @@ export function classifyError(err) {
   // D. No response at all — network failure or CORS (both result in no err.response)
   if (!err.response) {
     // Hint for developers in console
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.error('[TonyCV] Network/CORS error:', err.message, err);
     }
     return (

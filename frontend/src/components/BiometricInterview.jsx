@@ -2,7 +2,6 @@ import React, { useRef, useEffect, useState } from 'react';
 import { FiMic, FiMicOff, FiClock, FiX, FiCheckCircle, FiAlertCircle, FiAward, FiArrowRight } from 'react-icons/fi';
 import api from '../services/api';
 import { ensureBackendReady } from '../services/backendReady';
-import { classifyError } from '../utils/errorClassifier';
 
 const BiometricInterview = ({ isOpen, onClose }) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -168,6 +167,11 @@ const BiometricInterview = ({ isOpen, onClose }) => {
     const answerToSubmit = currentAnswer.trim();
 
     try {
+      const isReady = await ensureBackendReady();
+      if (!isReady) {
+        setErrorMsg('TonyCV server is taking longer than expected to wake up. Please try again.');
+        return;
+      }
       const response = await api.post(`/evaluate-answer`, {
         question: questions[currentQuestionIndex].text,
         user_answer: answerToSubmit || "No answer provided within the time limit."
@@ -188,13 +192,14 @@ const BiometricInterview = ({ isOpen, onClose }) => {
 
       if (currentQuestionIndex < questions.length - 1) {
         setCurrentQuestionIndex(prev => prev + 1);
+        setCurrentAnswer('');
+        setTimeLeft(questions[currentQuestionIndex + 1].duration);
       } else {
-        // Calculate average score
-        const avg = updatedScores.reduce((acc, curr) => acc + curr.score, 0) / updatedScores.length;
-        const avgScore = Math.round(avg);
-        setFinalScore(avgScore);
+        const total = updatedScores.reduce((acc, curr) => acc + curr.score, 0);
+        const avg = Math.round(total / questions.length);
+        setFinalScore(avg);
         localStorage.setItem('tonycv_latest_interview', JSON.stringify({
-          finalScore: avgScore,
+          finalScore: avg,
           questionScores: updatedScores,
           timestamp: new Date().toISOString()
         }));

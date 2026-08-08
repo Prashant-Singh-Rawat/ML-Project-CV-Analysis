@@ -65,22 +65,17 @@ export async function analyzeResume(formData, onStageChange, signal) {
   // Backend is confirmed healthy. Submit the CV exactly once.
   onStageChange?.('parsing');
 
-  try {
-    const response = await api.post('/analyze', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: ANALYZE_TIMEOUT_MS,
-      signal, // propagate cancellation
-    });
+  const response = await api.post('/analyze', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: ANALYZE_TIMEOUT_MS,
+    signal, // propagate cancellation
+  });
 
-    onStageChange?.('finishing');
+  onStageChange?.('finishing');
 
-    // Small yield to allow the UI to render the 'finishing' stage
-    await new Promise((r) => setTimeout(r, 400));
+  // Small yield to allow the UI to render the 'finishing' stage
+  await new Promise((r) => setTimeout(r, 400));
 
-    onStageChange?.('complete');
-    return response.data;
-  } catch (err) {
-    // Re-throw so the caller's catch block can handle + classify the error
-    throw err;
-  }
+  onStageChange?.('complete');
+  return response.data;
 }

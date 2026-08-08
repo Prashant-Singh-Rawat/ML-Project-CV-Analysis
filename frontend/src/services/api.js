@@ -54,7 +54,7 @@ axiosRetry(api, {
     // Retry only on network errors or server errors (5xx) for safe methods
     return (
       axiosRetry.isNetworkOrIdempotentRequestError(error) ||
-      (error.response?.status >= 500 ?? false)
+      Boolean(error.response && error.response.status >= 500)
     );
   },
 });
