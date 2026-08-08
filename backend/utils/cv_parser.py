@@ -134,11 +134,20 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
     return text
 
 
-def parse_cv_text(text: str) -> dict[str, any]:
+def parse_cv_text(text: str, jd_text: str = None, use_llama_extractor: bool = False) -> dict[str, any]:
     """
     Main parser function that takes raw CV text and returns parsed structured data.
     """
-    skills = extract_skills(text)
+    if use_llama_extractor:
+        from ml_pipeline.llama_extractor import get_llama_extractor
+        extractor = get_llama_extractor()
+        llama_result = extractor.extract_skills_and_proficiency(text)
+        skills = [s['skill'] for s in llama_result.get('skills', [])]
+        llama_proficiency_data = llama_result.get('skills', [])
+    else:
+        skills = extract_skills(text)
+        llama_proficiency_data = None
+        
     entities = extract_entities(text)
 
     # Simple word count using split (no spacy needed)
@@ -146,6 +155,7 @@ def parse_cv_text(text: str) -> dict[str, any]:
 
     return {
         "skills": skills,
+        "llama_proficiency_data": llama_proficiency_data,
         "organizations": entities["ORG"],
         "persons": entities["PERSON"],
         "locations": entities["GPE"],
