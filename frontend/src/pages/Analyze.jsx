@@ -6,12 +6,11 @@ import { classifyError } from '../utils/errorClassifier';
 import { AnimatePresence, motion } from 'framer-motion';
 import InputForm from '../components/InputForm';
 import {
-import SkillGapAnalysis from "../components/SkillGapAnalysis";
-
   FiUploadCloud, FiEdit3, FiArrowRight, FiArrowLeft, FiX,
   FiUser, FiUsers, FiStar, FiCheck, FiChevronRight, FiBriefcase,
   FiAward, FiHeart, FiFileText, FiCamera, FiPlus, FiTrash2, FiMaximize2
 } from 'react-icons/fi';
+import SkillGapAnalysis from "../components/SkillGapAnalysis";
 import html2pdf from 'html2pdf.js';
 import SoftwareEngineerTemplate from '../components/templates/SoftwareEngineerTemplate';
 import DataScientistTemplate from '../components/templates/DataScientistTemplate';
