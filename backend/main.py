@@ -437,7 +437,12 @@ async def get_companies():
 async def get_metrics():
     """Returns the evaluation metrics of the trained model"""
     if not model_manager.metrics:
-        model_manager.load_models() or model_manager.train_models()
+        model_manager.load_models()
+    if not model_manager.metrics:
+        raise HTTPException(
+            status_code=503,
+            detail="Model metrics are unavailable. Models have not been loaded yet.",
+        )
     return model_manager.metrics
 
 
