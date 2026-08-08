@@ -678,11 +678,12 @@ async def analyze_cv(
         ),
     }
 
-    # 7. Hiring Analysis based on experience level
-    hiring_analysis = compute_hiring_analysis(
-        candidate_skills=candidate_skills,
-        cgpa=cgpa,
-        experience_level=experience_level or "fresher",
+    # 7. Hiring Analysis based on experience level (CPU-bound; keep off the event loop)
+    hiring_analysis = await asyncio.to_thread(
+        compute_hiring_analysis,
+        candidate_skills,
+        cgpa,
+        experience_level or "fresher",
     )
 
     # 8. Construct Response
