@@ -10,14 +10,41 @@ The website will NEVER crash because of this module.
 """
 
 import logging
-
 import numpy as np
 
 logger = logging.getLogger(__name__)
 
-MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+# Use multilingual model for cross-lingual semantic matching
+MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 _model = None  # Lazy-loaded singleton
 _model_ok = None  # None=untried, True=loaded, False=failed permanently
+
+def detect_language(text: str) -> str:
+    """Detects the language of the given text."""
+    try:
+        from langdetect import detect
+        return detect(text)
+    except Exception:
+        return "en"
+
+def translate_skills(skills: list, target_lang: str = "en") -> list:
+    """Translation fallback for skills if semantic match is insufficient or for central processing."""
+    if not skills:
+        return skills
+    try:
+        from deep_translator import GoogleTranslator
+        translator = GoogleTranslator(source='auto', target=target_lang)
+        # Deep-translator can handle lists of texts in some versions, but list comprehension is safer
+        translated = []
+        for s in skills:
+            try:
+                translated.append(translator.translate(s))
+            except Exception:
+                translated.append(s)
+        return translated
+    except Exception as exc:
+        logger.warning(f"Translation failed: {exc}")
+        return skills
 
 
 # ─────────────────────────────────────────────────────────────
@@ -39,10 +66,10 @@ def _get_model():
     try:
         from sentence_transformers import SentenceTransformer
 
-        logger.info("[BERT] Loading all-MiniLM-L6-v2...")
+        logger.info(f"[BERT] Loading {MODEL_NAME}...")
         _model = SentenceTransformer(MODEL_NAME)
         _model_ok = True
-        logger.info("[BERT] Model loaded OK.")
+        logger.info("[BERT] Multilingual Model loaded OK.")
         return _model
     except Exception as exc:
         _model_ok = False
