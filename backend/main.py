@@ -468,17 +468,34 @@ async def analyze_cv(
     experience_level: str | None = Form("fresher"),
 ):
     # 1. Read and Parse the CV PDF
-    if not cv_file.filename.endswith(".pdf"):
+    MAX_CV_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+    filename = (cv_file.filename or "").strip().lower()
+    if not filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported.")
 
     try:
-        file_bytes = await cv_file.read()
+        chunks = []
+        total = 0
+        while True:
+            chunk = await cv_file.read(1024 * 1024)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > MAX_CV_UPLOAD_BYTES:
+                raise HTTPException(
+                    status_code=413,
+                    detail="PDF exceeds the 10 MB upload limit.",
+                )
+            chunks.append(chunk)
+        file_bytes = b"".join(chunks)
         # Parse PDF with a 15-second timeout to prevent indefinite hanging
         cv_text = await asyncio.wait_for(
             asyncio.to_thread(extract_text_from_pdf, file_bytes), timeout=15.0
         )
+    except HTTPException:
+        raise
     except asyncio.TimeoutError:
-        logger.error("PDF Parsing Timeout", extra={"cv_filename": cv_file.filename})
+        logger.error("PDF Parsing Timeout", extra={"cv_filename": filename})
         raise HTTPException(
             status_code=408,
             detail="Resume parsing timed out. The file might be too large or complex.",
@@ -486,7 +503,7 @@ async def analyze_cv(
     except Exception as e:
         logger.error(
             "PDF Parsing Error",
-            extra={"error": str(e), "cv_filename": cv_file.filename},
+            extra={"error": str(e), "cv_filename": filename},
         )
         raise HTTPException(status_code=500, detail=f"Failed to read PDF: {e!s}")
 
