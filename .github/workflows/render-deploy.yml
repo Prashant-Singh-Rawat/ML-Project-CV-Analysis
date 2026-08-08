@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger deploy via Render Deploy Hook
-        if: ${{ secrets.RENDER_DEPLOY_HOOK_URL != '' }}
+        if: secrets.RENDER_DEPLOY_HOOK_URL != ''
         run: |
           echo "Triggering Render deploy..."
           RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
@@ -28,7 +28,7 @@ jobs:
           fi
 
       - name: Fallback notification if no deploy hook configured
-        if: ${{ secrets.RENDER_DEPLOY_HOOK_URL == '' }}
+        if: secrets.RENDER_DEPLOY_HOOK_URL == ''
         run: |
           echo "⚠️ RENDER_DEPLOY_HOOK_URL secret not set."
           echo "To enable auto-deploy: Go to Render Dashboard → Your Service → Settings → Deploy Hook"
