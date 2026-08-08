@@ -4,6 +4,8 @@ import re
 import pdfplumber
 
 from ml_pipeline.synthetic_data import SKILLS_DB
+from ml_pipeline.anomaly_detector import get_anomaly_detector
+from ml_pipeline.question_generator import generate_interview_questions
 
 # ── Known tech companies / organisations for lightweight NER ─────────────────
 _KNOWN_ORGS = [
@@ -121,6 +123,29 @@ def extract_entities(text: str) -> dict[str, list[str]]:
     return entities
 
 
+def _estimate_experience_and_seniority(text: str) -> tuple[float, float]:
+    """Mock heuristic to estimate years of experience and seniority score."""
+    years = 2.0
+    seniority = 3.0
+    
+    # Very crude heuristic for mock purposes
+    if "senior" in text.lower() or "lead" in text.lower():
+        seniority = 8.0
+    if "executive" in text.lower() or "vp" in text.lower():
+        seniority = 10.0
+        
+    year_match = re.search(r"(\d+)\+?\s*years", text.lower())
+    if year_match:
+        years = float(year_match.group(1))
+        
+    return years, seniority
+
+
+def _extract_mock_summary(text: str) -> str:
+    """Extracts a short snippet from the text to serve as the summary for generation."""
+    return text[:300] if len(text) > 300 else text
+
+
 def extract_text_from_pdf(file_bytes: bytes) -> str:
     """
     Extracts text from a PDF file using pdfplumber.
@@ -140,6 +165,15 @@ def parse_cv_text(text: str) -> dict[str, any]:
     """
     skills = extract_skills(text)
     entities = extract_entities(text)
+    
+    # Anomaly Detection
+    years, seniority = _estimate_experience_and_seniority(text)
+    anomaly_detector = get_anomaly_detector()
+    anomalies = anomaly_detector.detect_anomalies(years, seniority)
+    
+    # Generative AI Interview Questions
+    summary = _extract_mock_summary(text)
+    interview_questions = generate_interview_questions(skills, summary)
 
     # Simple word count using split (no spacy needed)
     word_count = len([w for w in re.split(r"\s+", text) if w.strip()])
@@ -151,6 +185,8 @@ def parse_cv_text(text: str) -> dict[str, any]:
         "locations": entities["GPE"],
         "word_count": word_count,
         "raw_text": text,
+        "work_history_anomalies": anomalies,
+        "interview_questions": interview_questions
     }
 
 
