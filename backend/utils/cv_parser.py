@@ -123,15 +123,20 @@ def extract_entities(text: str) -> dict[str, list[str]]:
 
 def extract_text_from_pdf(file_bytes: bytes) -> str:
     """
-    Extracts text from a PDF file using pdfplumber.
+    Extracts text from a PDF file using pdfplumber and applies OCR error correction.
     """
+    from ml_pipeline.ocr_corrector import correct_ocr_text
+    
     text = ""
     with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
         for page in pdf.pages:
             page_text = page.extract_text()
             if page_text:
                 text += page_text + "\n"
-    return text
+                
+    # Apply ML-based sequence-to-sequence OCR error correction
+    cleaned_text = correct_ocr_text(text)
+    return cleaned_text
 
 
 def parse_cv_text(text: str) -> dict[str, any]:
