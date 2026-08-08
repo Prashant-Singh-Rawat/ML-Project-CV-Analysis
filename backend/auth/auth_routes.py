@@ -137,25 +137,44 @@ async def register(req: RegisterRequest):
 
 
 class UpdateSettingsRequest(BaseModel):
-    email: str
     phone: str | None = None
     updates_enabled: bool
+    # Optional legacy field — ignored. Identity comes from the JWT.
+    email: str | None = None
 
 
 @router.post(
     "/update-settings",
     summary="Update user email, phone, and notification subscription",
 )
-async def update_settings(req: UpdateSettingsRequest):
+async def update_settings(
+    req: UpdateSettingsRequest,
+    authorization: str = Header(None),
+):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+
+    token = authorization.split(" ", 1)[1]
+    payload = auth_utils.verify_token(token)
+    if not payload or not payload.get("sub"):
+        raise HTTPException(
+            status_code=401, detail="Invalid or expired token. Please log in again."
+        )
+
+    email = payload["sub"]
+    existing = user_db.get_user_by_email(email)
+    if not existing:
+        raise HTTPException(status_code=404, detail="User not found.")
+
     conn = user_db.get_connection()
     c = conn.cursor()
     c.execute(
         "UPDATE users SET phone = ?, updates_enabled = ? WHERE email = ?",
-        (req.phone, 1 if req.updates_enabled else 0, req.email),
+        (req.phone, 1 if req.updates_enabled else 0, email),
     )
     conn.commit()
     conn.close()
-    updated = user_db.get_user_by_email(req.email)
+    updated = user_db.get_user_by_email(email)
     if not updated:
         raise HTTPException(status_code=404, detail="User not found.")
     return {
