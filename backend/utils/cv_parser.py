@@ -134,18 +134,34 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
     return text
 
 
+from ml_pipeline.tone_analyzer import extract_summary_section, analyze_tone
+
+# Fallback mocks in case previous PRs aren't fully merged into this branch
+def redact_pii(text, entities): return text
+class MockKG:
+    def infer_implicit_skills(self, skills): return []
+def get_skill_knowledge_graph(): return MockKG()
+
 def parse_cv_text(text: str) -> dict[str, any]:
     """
     Main parser function that takes raw CV text and returns parsed structured data.
     """
     skills = extract_skills(text)
     entities = extract_entities(text)
+    
+    # Analyze tone from summary
+    summary = extract_summary_section(text)
+    tone_analysis = analyze_tone(summary)
+
 
     # Simple word count using split (no spacy needed)
     word_count = len([w for w in re.split(r"\s+", text) if w.strip()])
 
     return {
         "skills": skills,
+        "implicit_skills": implicit_skills,
+        "summary": summary,
+        "tone_analysis": tone_analysis,
         "organizations": entities["ORG"],
         "persons": entities["PERSON"],
         "locations": entities["GPE"],
