@@ -25,6 +25,7 @@ import SalaryPredictPage from './pages/SalaryPredictPage';
 import SkillGapPage from './pages/SkillGapPage';
 import PortfolioAnalyzerPage from './pages/PortfolioAnalyzerPage';
 import ResumeHistoryPage from './pages/ResumeHistoryPage';
+import api from './services/api';
 
 /* ── Scroll-to-top on route change ── */
 function ScrollToTop() {
@@ -304,6 +305,32 @@ function App() {
     return cached ? JSON.parse(cached) : null;
   });
   const [registerOpen, setRegisterOpen] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const authCode = params.get('auth_code');
+    if (!authCode) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.post('/auth/github/exchange', { auth_code: authCode });
+        if (cancelled) return;
+        localStorage.setItem('tonycv_token', res.data.access_token);
+        localStorage.setItem('tonycv_user', JSON.stringify(res.data.user));
+        setUser(res.data.user);
+      } catch (err) {
+        console.error('GitHub auth exchange failed:', err);
+      } finally {
+        params.delete('auth_code');
+        const next = params.toString();
+        const cleanUrl = `${window.location.pathname}${next ? `?${next}` : ''}${window.location.hash}`;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('tonycv_token');
