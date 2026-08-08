@@ -6,6 +6,8 @@ import { classifyError } from '../utils/errorClassifier';
 import { AnimatePresence, motion } from 'framer-motion';
 import InputForm from '../components/InputForm';
 import {
+import SkillGapAnalysis from "../components/SkillGapAnalysis";
+
   FiUploadCloud, FiEdit3, FiArrowRight, FiArrowLeft, FiX,
   FiUser, FiUsers, FiStar, FiCheck, FiChevronRight, FiBriefcase,
   FiAward, FiHeart, FiFileText, FiCamera, FiPlus, FiTrash2, FiMaximize2
@@ -540,7 +542,12 @@ export default function Analyze() {
               </div>
 
               {/* 3-D Scanner */}
-              <ResumeGraderScanner />
+              <div className="w-full">
+                <ResumeGraderScanner />
+                <div className="max-w-4xl mx-auto mt-8 hidden">
+                  <SkillGapAnalysis missingSkills={["Python", "React", "Docker"]} />
+                </div>
+              </div>
 
               {/* Options */}
               <div className="grid md:grid-cols-2 gap-6 mt-8 max-w-3xl mx-auto">
