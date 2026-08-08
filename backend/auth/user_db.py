@@ -172,3 +172,15 @@ def update_device_fingerprint(email: str, new_fingerprint: str):
     )
     conn.commit()
     conn.close()
+
+
+def link_google_account(email: str, google_id: str, device_fingerprint: str):
+    """Link Google ID to an existing user email and update device fingerprint."""
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute(
+        "UPDATE users SET google_id = ?, device_fingerprint = ?, failed_attempts = 0, locked_until = NULL WHERE email = ?",
+        (google_id, device_fingerprint, email),
+    )
+    conn.commit()
+    conn.close()

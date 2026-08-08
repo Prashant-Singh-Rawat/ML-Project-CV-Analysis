@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiCheck } from 'react-icons/fi';
 import api from '../services/api';
 import { ensureBackendReady } from '../services/backendReady';
 import { classifyError } from '../utils/errorClassifier';
+import { getDeviceFingerprint } from '../utils/deviceFingerprint';
 
 const RegisterPopup = ({ isOpen, onClose, onAuthSuccess }) => {
   const [mode, setMode] = useState('register'); // 'register' | 'login'
@@ -15,6 +16,11 @@ const RegisterPopup = ({ isOpen, onClose, onAuthSuccess }) => {
   const [authStage, setAuthStage] = useState(null);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [deviceFingerprint, setDeviceFingerprint] = useState('');
+
+  useEffect(() => {
+    getDeviceFingerprint().then(fp => setDeviceFingerprint(fp));
+  }, []);
 
   if (!isOpen) return null;
 
@@ -142,12 +148,13 @@ const RegisterPopup = ({ isOpen, onClose, onAuthSuccess }) => {
                       }
 
                       setAuthStage('signing-in');
+                      const fpToUse = deviceFingerprint || ('fp-' + payload.email);
                       const authRes = await api.post(`/auth/google`, {
                         google_id_token: response.credential,
                         name: payload.name || payload.email.split('@')[0],
                         email: payload.email,
                         google_id: payload.sub,
-                        device_fingerprint: 'web-fingerprint-' + payload.email
+                        device_fingerprint: fpToUse
                       });
 
                       const data = authRes.data;

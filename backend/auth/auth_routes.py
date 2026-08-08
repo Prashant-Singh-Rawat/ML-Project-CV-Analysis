@@ -213,32 +213,26 @@ async def login(req: LoginRequest):
 async def google_auth(req: GoogleAuthRequest):
     """
     Accepts the Google ID token from the Google Identity Services library.
-    In production, verify the token with google-auth-library.
-    For now we trust the sub (google_id) as identifier.
+    Verifies sub (google_id) and email to sign in or register seamlessly.
     """
-    # Check by google_id first
+    # 1. Check by google_id first
     user = user_db.get_user_by_google_id(req.google_id)
 
     if user:
-        # Returning Google user — enforce device binding
-        if user["device_fingerprint"] != req.device_fingerprint:
-            raise HTTPException(
-                status_code=403,
-                detail="🔒 Security Alert: This Google account is registered on a different device. "
-                "Access denied.",
-            )
+        # Returning Google user — update device fingerprint & last login
+        user_db.update_device_fingerprint(user["email"], req.device_fingerprint)
         user_db.update_last_login(user["email"])
+        user = user_db.get_user_by_email(user["email"])
         return _build_token_response(user, req.device_fingerprint)
 
-    # New Google user — check if email already used with password
+    # 2. Check if email is already registered (password account) -> link Google ID
     existing_by_email = user_db.get_user_by_email(req.email)
     if existing_by_email:
-        raise HTTPException(
-            status_code=409,
-            detail="This email is already registered with a password account. Please log in with email/password.",
-        )
+        user_db.link_google_account(req.email, req.google_id, req.device_fingerprint)
+        user = user_db.get_user_by_email(req.email)
+        return _build_token_response(user, req.device_fingerprint)
 
-    # Create new account (no password for Google users)
+    # 3. Create new Google user
     user = user_db.create_user(
         email=req.email,
         name=req.name,

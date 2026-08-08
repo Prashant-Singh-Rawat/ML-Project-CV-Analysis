@@ -232,9 +232,10 @@ const AuthPage = ({ onAuthSuccess }) => {
 
       // Phase 2: Google auth
       setAuthStage('signing-in');
+      const fpToUse = deviceFingerprint || ('fp-' + gEmail);
       const res = await api.post(`/auth/google`, {
         google_id_token, name: gName, email: gEmail, google_id,
-        device_fingerprint: deviceFingerprint
+        device_fingerprint: fpToUse
       });
       localStorage.setItem('tonycv_token', res.data.access_token);
       localStorage.setItem('tonycv_user', JSON.stringify(res.data.user));
