@@ -75,3 +75,31 @@ def verify_token(token: str) -> dict | None:
         return payload
     except JWTError:
         return None
+
+
+def get_current_user(authorization: str | None = None) -> dict:
+    """
+    Resolve the authenticated user from an Authorization: Bearer <jwt> header.
+    Raises fastapi.HTTPException on failure so route handlers stay thin.
+    """
+    from fastapi import HTTPException
+
+    from . import user_db
+
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+
+    token = authorization.split(" ", 1)[1].strip()
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+
+    payload = verify_token(token)
+    if not payload or not payload.get("sub"):
+        raise HTTPException(
+            status_code=401, detail="Invalid or expired token. Please log in again."
+        )
+
+    user = user_db.get_user_by_email(payload["sub"])
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    return user
