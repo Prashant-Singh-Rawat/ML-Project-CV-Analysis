@@ -186,8 +186,8 @@ async def login(req: LoginRequest):
     if not user.get("hashed_password") or not auth_utils.verify_password(
         req.password, user["hashed_password"]
     ):
-        user_db.increment_failed_attempts(req.email)
-        attempts_left = max(0, 5 - (user.get("failed_attempts", 0) + 1))
+        attempts = user_db.increment_failed_attempts(req.email)
+        attempts_left = max(0, 5 - attempts)
         raise HTTPException(
             status_code=401,
             detail=f"Invalid email or password. {attempts_left} attempt(s) remaining before lockout.",
