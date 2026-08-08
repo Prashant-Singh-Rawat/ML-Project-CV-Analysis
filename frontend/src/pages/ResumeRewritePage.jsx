@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+import api from '../services/api';
+import { ensureBackendReady } from '../services/backendReady';
+import { classifyError } from '../utils/errorClassifier';
 
 const SECTIONS = ['Summary', 'Experience', 'Projects', 'Skills', 'Achievements'];
 
@@ -19,16 +20,15 @@ export default function ResumeRewriteAssistant() {
     setLoading(true);
     setResult(null);
     try {
-      const res = await fetch(`${API}/features/rewrite`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ section: section.toLowerCase(), content }),
-      });
-      if (!res.ok) throw new Error('Rewrite request failed');
-      const data = await res.json();
-      setResult(data);
-    } catch {
-      setError('Failed to connect to the server. Please try again.');
+      const isReady = await ensureBackendReady();
+      if (!isReady) {
+        setError('TonyCV server is taking longer than expected to wake up. Please try again.');
+        return;
+      }
+      const res = await api.post('/features/rewrite', { section: section.toLowerCase(), content });
+      setResult(res.data);
+    } catch (err) {
+      setError(err.response?.data?.detail || classifyError(err));
     } finally {
       setLoading(false);
     }

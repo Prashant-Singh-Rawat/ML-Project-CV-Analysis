@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { FiCheck } from 'react-icons/fi';
+import api from '../services/api';
+import { ensureBackendReady } from '../services/backendReady';
+import { classifyError } from '../utils/errorClassifier';
 
 const RegisterPopup = ({ isOpen, onClose, onAuthSuccess }) => {
   const [mode, setMode] = useState('register'); // 'register' | 'login'
@@ -9,6 +12,7 @@ const RegisterPopup = ({ isOpen, onClose, onAuthSuccess }) => {
   const [password, setPassword] = useState('');
   const [updatesEnabled, setUpdatesEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [authStage, setAuthStage] = useState(null);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -17,72 +21,59 @@ const RegisterPopup = ({ isOpen, onClose, onAuthSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setAuthStage('connecting');
     setError('');
     setSuccessMsg('');
 
-    const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-      ? 'http://localhost:8000'
-      : 'https://tonycv-backend.onrender.com';
-
     try {
+      const abortCtrl = new AbortController();
+      const isReady = await ensureBackendReady(setAuthStage, abortCtrl.signal);
+      if (!isReady) {
+        setError('TonyCV server is taking longer than expected. Please try again.');
+        return;
+      }
+
+      setAuthStage('signing-in');
       if (mode === 'register') {
-        const response = await fetch(`${API_BASE_URL}/auth/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email,
-            name,
-            password,
-            device_fingerprint: 'web-fingerprint-' + email,
-            phone: phone || null,
-            updates_enabled: updatesEnabled
-          })
+        const response = await api.post(`/auth/register`, {
+          email,
+          name,
+          password,
+          device_fingerprint: 'web-fingerprint-' + email,
+          phone: phone || null,
+          updates_enabled: updatesEnabled
         });
 
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          if (response.status === 409) {
-            setMode('login');
-            throw new Error("Account already exists. Please sign in instead.");
-          }
-          throw new Error(data.detail || 'Registration failed');
-        }
-
+        const data = response.data;
         localStorage.setItem('tonycv_token', data.access_token);
         localStorage.setItem('tonycv_user', JSON.stringify(data.user));
         setSuccessMsg('Account registered successfully!');
         setTimeout(() => {
           if (onAuthSuccess) onAuthSuccess(data.user);
           onClose();
-        }, 1500);
+        }, 1200);
       } else {
-        const response = await fetch(`${API_BASE_URL}/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email,
-            password,
-            device_fingerprint: 'web-fingerprint-' + email
-          })
+        const response = await api.post(`/auth/login`, {
+          email,
+          password,
+          device_fingerprint: 'web-fingerprint-' + email
         });
 
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(data.detail || 'Login failed');
-        }
-
+        const data = response.data;
         localStorage.setItem('tonycv_token', data.access_token);
         localStorage.setItem('tonycv_user', JSON.stringify(data.user));
         setSuccessMsg('Logged in successfully!');
         setTimeout(() => {
           if (onAuthSuccess) onAuthSuccess(data.user);
           onClose();
-        }, 1500);
+        }, 1200);
       }
     } catch (err) {
-      setError(err.message || 'An error occurred. Please try again.');
+      if (err.name === 'AbortError' || err.name === 'CanceledError') return;
+      setError(err.response?.data?.detail || classifyError(err));
     } finally {
       setLoading(false);
+      setAuthStage(null);
     }
   };
 
@@ -131,42 +122,35 @@ const RegisterPopup = ({ isOpen, onClose, onAuthSuccess }) => {
                   client_id: '132721264540-a2794sbnqvens788p1tqe26asn0q1i9r.apps.googleusercontent.com',
                   callback: async (response) => {
                     setLoading(true);
+                    setAuthStage('connecting');
                     setError('');
                     try {
                       if (!response.credential) {
                         throw new Error('Google verification cancelled.');
                       }
-                      // Parse credentials JWT
                       const base64Url = response.credential.split('.')[1];
                       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
                       const payload = JSON.parse(window.atob(base64));
-                      
-                      // Pre-fill email and name from verified Google Account
+
                       setEmail(payload.email || '');
                       setName(payload.name || '');
-                      
-                      // Automatic Google Login/Register call
-                      const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-                        ? 'http://localhost:8000'
-                        : 'https://tonycv-backend.onrender.com';
-                        
-                      const authRes = await fetch(`${API_BASE_URL}/auth/google`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          google_id_token: response.credential,
-                          name: payload.name || payload.email.split('@')[0],
-                          email: payload.email,
-                          google_id: payload.sub,
-                          device_fingerprint: 'web-fingerprint-' + payload.email
-                        })
-                      });
-                      
-                      const data = await authRes.json().catch(() => ({}));
-                      if (!authRes.ok) {
-                        throw new Error(data.detail || 'Google authentication failed');
+
+                      const abortCtrl = new AbortController();
+                      const isReady = await ensureBackendReady(setAuthStage, abortCtrl.signal);
+                      if (!isReady) {
+                        throw new Error('TonyCV server is taking longer than expected. Please try again.');
                       }
-                      
+
+                      setAuthStage('signing-in');
+                      const authRes = await api.post(`/auth/google`, {
+                        google_id_token: response.credential,
+                        name: payload.name || payload.email.split('@')[0],
+                        email: payload.email,
+                        google_id: payload.sub,
+                        device_fingerprint: 'web-fingerprint-' + payload.email
+                      });
+
+                      const data = authRes.data;
                       localStorage.setItem('tonycv_token', data.access_token);
                       localStorage.setItem('tonycv_user', JSON.stringify(data.user));
                       setSuccessMsg('Verified with Google successfully!');
@@ -175,8 +159,9 @@ const RegisterPopup = ({ isOpen, onClose, onAuthSuccess }) => {
                         onClose();
                       }, 1200);
                     } catch (innerErr) {
-                      setError(innerErr.message || 'Google verification failed.');
+                      setError(innerErr.response?.data?.detail || classifyError(innerErr) || innerErr.message || 'Google verification failed.');
                       setLoading(false);
+                      setAuthStage(null);
                     }
                   }
                 });
@@ -277,12 +262,25 @@ const RegisterPopup = ({ isOpen, onClose, onAuthSuccess }) => {
             </div>
           )}
 
+          {authStage === 'waking' && (
+            <div className="p-2.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-xs font-semibold text-center mb-2">
+              ⏳ Server is waking up (takes ~60s on free hosting)...
+            </div>
+          )}
+
           <button 
             type="submit" 
             disabled={loading}
             className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm shadow-md hover:shadow-lg transition-all disabled:opacity-50"
           >
-            {loading ? 'Processing...' : mode === 'register' ? 'Register Account' : 'Sign In'}
+            {loading ? (
+              authStage === 'connecting' ? 'Connecting to server...' :
+              authStage === 'waking' ? 'Waking server...' :
+              authStage === 'ready' ? 'Server ready...' :
+              mode === 'register' ? 'Registering Account...' : 'Signing In...'
+            ) : (
+              mode === 'register' ? 'Register Account' : 'Sign In'
+            )}
           </button>
         </form>
 

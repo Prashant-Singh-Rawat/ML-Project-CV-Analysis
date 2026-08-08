@@ -30,5 +30,5 @@ backend/ml_pipeline/models/*.pkl
 frontend/.dist/
 **/dist/
 
-# YOLO Badge Trigger
-# Pair Extraordinaire Trigger
+# Temporary scripts
+process_github_all.py

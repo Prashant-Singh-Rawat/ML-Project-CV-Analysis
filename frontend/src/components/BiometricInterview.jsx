@@ -1,6 +1,8 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { FiMic, FiMicOff, FiClock, FiX, FiCheckCircle, FiAlertCircle, FiAward, FiArrowRight } from 'react-icons/fi';
 import api from '../services/api';
+import { ensureBackendReady } from '../services/backendReady';
+import { classifyError } from '../utils/errorClassifier';
 
 const BiometricInterview = ({ isOpen, onClose }) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);

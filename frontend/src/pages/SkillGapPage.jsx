@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import api from '../services/api';
+import { ensureBackendReady } from '../services/backendReady';
+import { classifyError } from '../utils/errorClassifier';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const ROLES = ['Software Engineer', 'Data Scientist', 'ML Engineer', 'Frontend Developer', 'Full Stack Developer'];
 
 export default function SkillGapPage() {
@@ -17,12 +19,16 @@ export default function SkillGapPage() {
     setLoading(true);
     setResult(null);
     try {
+      const isReady = await ensureBackendReady();
+      if (!isReady) {
+        setError('TonyCV server is taking longer than expected to wake up. Please try again.');
+        return;
+      }
       const params = new URLSearchParams({ target_role: role, candidate_skills: candidateSkills });
-      const res = await fetch(`${API}/features/skill-gap-recommendations?${params.toString()}`);
-      if (!res.ok) throw new Error();
-      setResult(await res.json());
-    } catch {
-      setError('Failed to analyze skill gaps. Please try again.');
+      const res = await api.get(`/features/skill-gap-recommendations?${params.toString()}`);
+      setResult(res.data);
+    } catch (err) {
+      setError(err.response?.data?.detail || classifyError(err));
     } finally {
       setLoading(false);
     }

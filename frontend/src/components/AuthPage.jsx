@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
+import { ensureBackendReady } from '../services/backendReady';
+import { classifyError } from '../utils/errorClassifier';
 import { getDeviceFingerprint } from '../utils/deviceFingerprint';
 import {
   FiMail, FiLock, FiUser, FiEye, FiEyeOff, FiShield,
@@ -136,6 +138,9 @@ const AuthPage = ({ onAuthSuccess }) => {
   const [updatesEnabled, setUpdatesEnabled] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  // Dynamic loading stage for cold-start UX
+  // null | 'connecting' | 'waking' | 'ready' | 'signing-in' | 'success'
+  const [authStage, setAuthStage] = useState(null);
   const [deviceFingerprint, setDeviceFingerprint] = useState('');
   const [fpLoading, setFpLoading] = useState(true);
 
@@ -159,38 +164,55 @@ const AuthPage = ({ onAuthSuccess }) => {
     if (fpLoading) { setError('Device verification in progress...'); return; }
     setError('');
     setIsLoading(true);
+    setAuthStage('connecting');
 
     try {
+      // Phase 1: Wake backend if sleeping
+      const abortCtrl = new AbortController();
+      const isReady = await ensureBackendReady(setAuthStage, abortCtrl.signal);
+      if (!isReady) {
+        setError('TonyCV server is taking longer than expected. Please try again.');
+        return;
+      }
+
+      // Phase 2: Perform auth
+      setAuthStage('signing-in');
       if (mode === 'register') {
         if (password !== confirmPassword) {
           setError('Passwords do not match.');
-          setIsLoading(false);
           return;
         }
         const res = await api.post(`/auth/register`, {
-          email, 
-          name, 
-          password, 
+          email,
+          name,
+          password,
           device_fingerprint: deviceFingerprint,
           phone: phone || null,
           updates_enabled: updatesEnabled
         });
         localStorage.setItem('tonycv_token', res.data.access_token);
         localStorage.setItem('tonycv_user', JSON.stringify(res.data.user));
-        onAuthSuccess(res.data.user);
+        setAuthStage('success');
+        setTimeout(() => onAuthSuccess(res.data.user), 600);
       } else {
         const res = await api.post(`/auth/login`, {
           email, password, device_fingerprint: deviceFingerprint
         });
         localStorage.setItem('tonycv_token', res.data.access_token);
         localStorage.setItem('tonycv_user', JSON.stringify(res.data.user));
-        onAuthSuccess(res.data.user);
+        setAuthStage('success');
+        setTimeout(() => onAuthSuccess(res.data.user), 600);
       }
     } catch (err) {
-      const msg = err.response?.data?.detail || 'An error occurred. Please try again.';
+      // Ignore abort errors (user navigated away)
+      if (err.name === 'AbortError' || err.name === 'CanceledError') return;
+      const msg =
+        err.response?.data?.detail ||
+        classifyError(err);
       setError(msg);
     } finally {
       setIsLoading(false);
+      setAuthStage(null);
     }
   };
 
@@ -198,18 +220,32 @@ const AuthPage = ({ onAuthSuccess }) => {
     if (fpLoading) { setError('Device verification in progress...'); return; }
     setError('');
     setIsLoading(true);
+    setAuthStage('connecting');
     try {
+      // Phase 1: Wake backend if sleeping
+      const abortCtrl = new AbortController();
+      const isReady = await ensureBackendReady(setAuthStage, abortCtrl.signal);
+      if (!isReady) {
+        setError('TonyCV server is taking longer than expected. Please try again.');
+        return;
+      }
+
+      // Phase 2: Google auth
+      setAuthStage('signing-in');
       const res = await api.post(`/auth/google`, {
         google_id_token, name: gName, email: gEmail, google_id,
         device_fingerprint: deviceFingerprint
       });
       localStorage.setItem('tonycv_token', res.data.access_token);
       localStorage.setItem('tonycv_user', JSON.stringify(res.data.user));
-      onAuthSuccess(res.data.user);
+      setAuthStage('success');
+      setTimeout(() => onAuthSuccess(res.data.user), 600);
     } catch (err) {
+      if (err.name === 'AbortError' || err.name === 'CanceledError') return;
       setError(err.response?.data?.detail || 'Google sign-in failed. Please try again.');
     } finally {
       setIsLoading(false);
+      setAuthStage(null);
     }
   };
 
@@ -609,6 +645,19 @@ const AuthPage = ({ onAuthSuccess }) => {
             )}
 
             {/* Submit Button */}
+            {/* Cold-start banner — only shown when server is waking */}
+            {authStage === 'waking' && (
+              <div style={{
+                display: 'flex', alignItems: 'flex-start', gap: '8px',
+                padding: '10px 12px', borderRadius: '9px', marginBottom: '4px',
+                background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.25)',
+              }}>
+                <span style={{ fontSize: '15px', flexShrink: 0 }}>⏳</span>
+                <p style={{ color: '#fcd34d', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
+                  TonyCV server is waking up. This may take up to a minute on free hosting.
+                </p>
+              </div>
+            )}
             <button
               id="auth-submit-btn"
               type="submit"
@@ -618,18 +667,20 @@ const AuthPage = ({ onAuthSuccess }) => {
                 padding: '13px',
                 borderRadius: '12px',
                 border: 'none',
-                background: 'linear-gradient(135deg, #7c3aed, #6366f1)',
+                background: authStage === 'success'
+                  ? 'linear-gradient(135deg, #059669, #10b981)'
+                  : 'linear-gradient(135deg, #7c3aed, #6366f1)',
                 color: '#fff',
                 fontWeight: 700,
                 fontSize: '15px',
                 cursor: isLoading || fpLoading ? 'not-allowed' : 'pointer',
-                opacity: isLoading || fpLoading ? 0.7 : 1,
+                opacity: isLoading || fpLoading ? 0.85 : 1,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
                 boxShadow: '0 4px 20px rgba(124,58,237,0.35)',
-                transition: 'all 0.2s ease',
+                transition: 'all 0.3s ease',
                 marginTop: '4px',
               }}
               onMouseEnter={e => { if (!isLoading && !fpLoading) { e.currentTarget.style.boxShadow = '0 8px 28px rgba(124,58,237,0.5)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}}
@@ -637,8 +688,20 @@ const AuthPage = ({ onAuthSuccess }) => {
             >
               {isLoading ? (
                 <>
-                  <div style={{ width: '18px', height: '18px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-                  {mode === 'register' ? 'Creating Account...' : 'Signing In...'}
+                  <div style={{
+                    width: '18px', height: '18px',
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    borderTopColor: authStage === 'waking' ? '#fcd34d' : authStage === 'success' ? '#6ee7b7' : '#fff',
+                    borderRadius: '50%',
+                    animation: 'spin 0.7s linear infinite',
+                    flexShrink: 0,
+                  }} />
+                  {authStage === 'connecting' && 'Connecting to TonyCV...'}
+                  {authStage === 'waking' && 'Waking up server...'}
+                  {authStage === 'ready' && (mode === 'register' ? 'Server ready, creating account...' : 'Server ready, signing in...')}
+                  {authStage === 'signing-in' && (mode === 'register' ? 'Creating your account...' : 'Signing you in...')}
+                  {authStage === 'success' && '✓ ' + (mode === 'register' ? 'Account created!' : 'Signed in!')}
+                  {!authStage && (mode === 'register' ? 'Creating Account...' : 'Signing In...')}
                 </>
               ) : (
                 <>

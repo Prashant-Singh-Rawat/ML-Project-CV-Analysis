@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { analyzeResume } from '../services/resumeAnalysis';
+import { classifyError } from '../utils/errorClassifier';
 import { AnimatePresence, motion } from 'framer-motion';
 import InputForm from '../components/InputForm';
 import { 
@@ -356,8 +358,10 @@ export default function Home() {
 
   // UI status
   const [isLoading, setIsLoading] = useState(false);
+  const [analysisStage, setAnalysisStage] = useState(null);
   const [error, setError] = useState('');
   const [companies, setCompanies] = useState(FALLBACK_COMPANIES);
+  const abortControllerRef = useRef(null);
 
   const photoRef = useRef(null);
 
@@ -378,38 +382,54 @@ export default function Home() {
   };
 
   // Handler for analyzing uploaded resume file
+  // Flow: poll /health → backend wakes → POST /analyze once → navigate
   const handleAnalyze = async (formData) => {
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setIsLoading(true);
+    setAnalysisStage('connecting');
     setError('');
     try {
-      const res = await api.post(`/analyze`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      navigate('/dashboard', { state: { analysisData: res.data } });
+      const data = await analyzeResume(formData, setAnalysisStage, controller.signal);
+      navigate('/dashboard', { state: { analysisData: data } });
     } catch (err) {
-      setError(err?.response?.data?.detail || 'Analysis failed. Please try again.');
+      if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
+        setError(classifyError(err));
+      }
     } finally {
       setIsLoading(false);
+      setAnalysisStage(null);
     }
   };
 
   // Compile PDF & run analyze from scratch builder
   const handleScratchAnalyze = async () => {
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setIsLoading(true);
+    setAnalysisStage('connecting');
     setError('');
     try {
       const el = document.getElementById('live-resume-preview');
       const blob = await html2pdf().set({ margin: 0, filename: 'resume.pdf', image: { type: 'jpeg', quality: 0.98 }, jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } }).from(el).outputPdf('blob');
       const file = new File([blob], 'resume.pdf', { type: 'application/pdf' });
       const fd = new FormData();
-      fd.append('file', file);
+      fd.append('cv_file', file);
       fd.append('target_company', FALLBACK_COMPANIES[0] || 'Google');
       fd.append('job_description', '');
-      const res = await api.post(`/analyze`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      navigate('/dashboard', { state: { analysisData: res.data } });
+      const data = await analyzeResume(fd, setAnalysisStage, controller.signal);
+      navigate('/dashboard', { state: { analysisData: data } });
     } catch (err) {
-      console.error("Analysis Error: ", err);
-      setError(err?.response?.data?.detail || err?.message || String(err) || 'Could not analyse resume. Please try again.');
+      if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
+        setError(classifyError(err));
+      }
     } finally {
       setIsLoading(false);
+      setAnalysisStage(null);
     }
   };
 
@@ -1053,7 +1073,7 @@ export default function Home() {
                       </motion.div>
                     )}
 
-                    <InputForm onAnalyze={handleAnalyze} isLoading={isLoading} companies={companies} />
+                    <InputForm onAnalyze={handleAnalyze} isLoading={isLoading} companies={companies} analysisStage={analysisStage} />
                   </motion.div>
                 )}
 

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+import api from '../services/api';
+import { ensureBackendReady } from '../services/backendReady';
+import { classifyError } from '../utils/errorClassifier';
 
 const STAGES = ['technical', 'hr', 'behavioral'];
 const ROLES = ['Software Engineer', 'Data Scientist', 'ML Engineer', 'Frontend Developer', 'Full Stack Developer'];
@@ -24,17 +25,16 @@ export default function InterviewSimulatorPage() {
     setAnswer('');
     setError('');
     try {
-      const res = await fetch(`${API}/features/interview/question`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role, stage, previous_answers: history }),
-      });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setQuestion(data.question);
+      const isReady = await ensureBackendReady();
+      if (!isReady) {
+        setError('TonyCV server is taking longer than expected to wake up. Please try again.');
+        return;
+      }
+      const res = await api.post('/features/interview/question', { role, stage, previous_answers: history });
+      setQuestion(res.data.question);
       setSessionActive(true);
-    } catch {
-      setError('Failed to load question. Please try again.');
+    } catch (err) {
+      setError(err.response?.data?.detail || classifyError(err));
     } finally {
       setLoadingQ(false);
     }
@@ -45,17 +45,17 @@ export default function InterviewSimulatorPage() {
     setLoadingE(true);
     setError('');
     try {
-      const res = await fetch(`${API}/features/interview/evaluate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, answer, role, stage }),
-      });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
+      const isReady = await ensureBackendReady();
+      if (!isReady) {
+        setError('TonyCV server is taking longer than expected to wake up. Please try again.');
+        return;
+      }
+      const res = await api.post('/features/interview/evaluate', { question, answer, role, stage });
+      const data = res.data;
       setEvaluation(data);
       setHistory(prev => [...prev, { question, answer, score: data.confidence_score }]);
-    } catch {
-      setError('Failed to evaluate answer. Please try again.');
+    } catch (err) {
+      setError(err.response?.data?.detail || classifyError(err));
     } finally {
       setLoadingE(false);
     }

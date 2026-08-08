@@ -123,15 +123,66 @@ const CompanyDropdown = ({ value, onChange, companies }) => {
   );
 };
 
-const LOADING_STAGES = [
-  { after: 0,  text: '⏳ Waking up AI server…',              sub: 'First request may take up to 60s on free tier' },
-  { after: 15, text: '📄 Parsing your PDF…',                 sub: 'Extracting text and structure' },
-  { after: 30, text: '🧠 Running NLP & BERT matching…',     sub: 'Computing keyword similarity vectors' },
-  { after: 50, text: '📊 Building your score report…',      sub: 'Generating AI recommendations' },
-  { after: 70, text: '🚀 Almost done — finalising report…', sub: 'Hang tight, nearly there!' },
-];
+/**
+ * Stage-driven loading configuration.
+ * Each stage corresponds to a real backend processing step.
+ * Progress bar fills proportionally based on stage index — not fake time estimates.
+ */
+const ANALYSIS_STAGES = {
+  connecting: {
+    icon: '⏳',
+    text: 'Connecting to TonyCV AI Engine',
+    sub: 'Establishing connection to the AI backend…',
+    progress: 5,
+  },
+  waking: {
+    icon: '⏳',
+    text: 'Waking up AI backend',
+    sub: 'The server is starting up — this takes 30–90s on free hosting. Please don\'t close this tab.',
+    progress: 20,
+  },
+  ready: {
+    icon: '✓',
+    text: 'AI backend ready',
+    sub: 'Starting resume analysis…',
+    progress: 35,
+    accent: '#10b981',
+  },
+  parsing: {
+    icon: '📄',
+    text: 'Processing your resume',
+    sub: 'Extracting text, structure and entities from your PDF…',
+    progress: 55,
+  },
+  analyzing: {
+    icon: '🧠',
+    text: 'AI analysis in progress',
+    sub: 'Evaluating skills, experience, education and ATS compatibility…',
+    progress: 75,
+  },
+  finishing: {
+    icon: '📊',
+    text: 'Generating insights',
+    sub: 'Preparing your personalised recommendations and hiring score…',
+    progress: 90,
+  },
+  complete: {
+    icon: '✓',
+    text: 'Analysis complete!',
+    sub: 'Your CV analysis is ready. Loading results…',
+    progress: 100,
+    accent: '#10b981',
+  },
+  timeout: {
+    icon: '⚠️',
+    text: 'Server taking longer than expected',
+    sub: 'The AI backend is under high load. Your CV is ready — you can retry.',
+    progress: 0,
+    accent: '#f59e0b',
+  },
+};
 
-const InputForm = ({ onAnalyze, isLoading, companies }) => {
+const InputForm = ({ onAnalyze, isLoading, companies, analysisStage }) => {
   const [cvFile, setCvFile]             = useState(null);
   const [cgpa, setCgpa]                 = useState('');
   const [targetCompany, setTargetCompany] = useState('');
@@ -140,6 +191,8 @@ const InputForm = ({ onAnalyze, isLoading, companies }) => {
   const [, setDragOver]         = useState(false);
   const [elapsed, setElapsed]           = useState(0);
   const elapsedRef                      = useRef(null);
+  // Track whether we've already started (to show retry hint)
+  const [hasAttempted, setHasAttempted] = useState(false);
 
   // Voice Input State
   const [isListening, setIsListening]   = useState(false);
@@ -187,10 +240,11 @@ const InputForm = ({ onAnalyze, isLoading, companies }) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Start / stop the elapsed-seconds timer whenever isLoading changes
+  // Elapsed timer — for secondary display only (not for progress bar)
   useEffect(() => {
     if (isLoading) {
       setElapsed(0);
+      setHasAttempted(true);
       elapsedRef.current = setInterval(() => setElapsed(s => s + 1), 1000);
     } else {
       clearInterval(elapsedRef.current);
@@ -198,8 +252,8 @@ const InputForm = ({ onAnalyze, isLoading, companies }) => {
     return () => clearInterval(elapsedRef.current);
   }, [isLoading]);
 
-  // Pick the loading stage message based on elapsed seconds
-  const loadingStage = LOADING_STAGES.slice().reverse().find(s => elapsed >= s.after) || LOADING_STAGES[0];
+  // Resolve the current stage config from the analysisStage prop
+  const activeStage = ANALYSIS_STAGES[analysisStage] || ANALYSIS_STAGES.connecting;
 
   const _toggleVoice = () => {
     if (!recognitionRef.current) return;
@@ -219,18 +273,28 @@ const InputForm = ({ onAnalyze, isLoading, companies }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!cvFile) {
-      alert("Please upload your Resume/CV PDF file.");
+      alert('Please upload your Resume/CV PDF file.');
       return;
     }
-    
-    // Create form data submit object
+    // Validate file type client-side (backend also validates independently)
+    if (!cvFile.name.toLowerCase().endsWith('.pdf') && cvFile.type !== 'application/pdf') {
+      alert('Only PDF files are supported. Please upload a .pdf file.');
+      return;
+    }
+    // Validate file size client-side (5 MB limit)
+    if (cvFile.size > 5 * 1024 * 1024) {
+      alert('File is too large. Please upload a PDF under 5 MB.');
+      return;
+    }
+    // Create form data — the File object stays in React state (cvFile),
+    // so the user does not need to re-select the file on retry.
     const fd = new FormData();
     fd.append('cv_file', cvFile);
     if (cgpa) fd.append('cgpa', parseFloat(cgpa));
     if (targetCompany) fd.append('target_company', targetCompany);
     if (githubUrl) fd.append('github_url', githubUrl);
     fd.append('experience_level', experienceLevel);
-    
+
     onAnalyze(fd);
   };
 
@@ -390,26 +454,51 @@ const InputForm = ({ onAnalyze, isLoading, companies }) => {
 
         {/* Submit Button + Loading Progress */}
         {isLoading ? (
-          <div className="w-full rounded-2xl overflow-hidden border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
-            {/* Progress bar */}
+          <div
+            className="w-full rounded-2xl overflow-hidden border bg-gradient-to-br from-blue-50 to-indigo-50 p-4"
+            style={{ borderColor: activeStage.accent ? `${activeStage.accent}40` : '#bfdbfe' }}
+          >
+            {/* Real stage-based progress bar — NOT fake time percentage */}
             <div className="h-1.5 bg-blue-100 rounded-full mb-3 overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-1000"
-                style={{ width: `${Math.min(95, (elapsed / 90) * 100)}%` }}
+                className="h-full rounded-full transition-all duration-700 ease-out"
+                style={{
+                  width: `${activeStage.progress}%`,
+                  background: activeStage.accent
+                    ? `linear-gradient(90deg, ${activeStage.accent}, ${activeStage.accent}cc)`
+                    : 'linear-gradient(90deg, #3b82f6, #6366f1)',
+                }}
               />
             </div>
-            {/* Status text */}
+            {/* Stage status */}
             <div className="flex items-center gap-3">
-              <div className="w-5 h-5 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin shrink-0" />
-              <div>
-                <p className="text-sm font-bold text-blue-800">{loadingStage.text}</p>
-                <p className="text-xs text-blue-500 mt-0.5">{loadingStage.sub}</p>
+              {/* Spinner — hidden on complete/timeout stages */}
+              {analysisStage !== 'complete' && analysisStage !== 'timeout' ? (
+                <div
+                  className="w-5 h-5 border-2 rounded-full animate-spin shrink-0"
+                  style={{
+                    borderColor: activeStage.accent ? `${activeStage.accent}40` : '#bfdbfe',
+                    borderTopColor: activeStage.accent || '#2563eb',
+                  }}
+                />
+              ) : (
+                <span className="text-lg shrink-0">{activeStage.icon}</span>
+              )}
+              <div className="flex-1 min-w-0">
+                <p
+                  className="text-sm font-bold truncate"
+                  style={{ color: activeStage.accent || '#1e40af' }}
+                >
+                  {activeStage.text}
+                </p>
+                <p className="text-xs text-blue-500 mt-0.5 leading-snug">{activeStage.sub}</p>
               </div>
-              <span className="ml-auto text-xs font-mono text-blue-400">{elapsed}s</span>
+              <span className="ml-auto text-xs font-mono text-blue-400 shrink-0">{elapsed}s</span>
             </div>
-            {elapsed >= 55 && (
+            {/* Waking stage hint — shown only when backend is actually sleeping */}
+            {analysisStage === 'waking' && elapsed >= 20 && (
               <p className="mt-2 text-xs text-amber-600 font-semibold text-center">
-                ⚡ Still working — free servers can take up to 90s on first request. Please don't close this tab!
+                ⚡ Render free tier servers sleep after 15 min of inactivity. Hang tight!
               </p>
             )}
           </div>
@@ -420,7 +509,7 @@ const InputForm = ({ onAnalyze, isLoading, companies }) => {
             className="w-full py-4 rounded-2xl text-white font-extrabold text-base shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 transition-all hover:scale-[1.01]"
             style={{ background: 'linear-gradient(135deg, #1e3a8a, #3b82f6)' }}
           >
-            Upload & Grade CV <FiArrowRight />
+            {hasAttempted ? 'Retry Analysis' : 'Upload & Grade CV'} <FiArrowRight />
           </button>
         )}
       </form>

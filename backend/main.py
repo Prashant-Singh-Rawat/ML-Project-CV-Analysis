@@ -2,6 +2,7 @@ import asyncio
 import os
 import random
 import re
+import time
 import urllib.request
 
 # Auth
@@ -23,13 +24,33 @@ from utils.middleware import RequestIDMiddleware, TimingMiddleware
 
 app = FastAPI(title="TonyCV API", version="2.0.0")
 
-# Setup CORS
+# ── CORS Configuration ─────────────────────────────────────────────────────
+# Per browser spec: allow_credentials=True is incompatible with allow_origins=["*"].
+# We use an explicit allowlist driven by ALLOWED_ORIGINS env var.
+# Render sets this via render.yaml; local dev always gets localhost:5173.
+_env_origins = os.environ.get("ALLOWED_ORIGINS", "")
+_extra_origins = [o.strip() for o in _env_origins.split(",") if o.strip()]
+
+ALLOWED_ORIGINS = list(
+    {
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        *_extra_origins,
+    }
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+logger.info(
+    "CORS configured",
+    extra={"allowed_origins": ALLOWED_ORIGINS},
 )
 
 # Setup SRE Observability Middleware
@@ -59,27 +80,60 @@ app.include_router(auth_router)
 app.include_router(features_router)
 app.include_router(resume_history_router)
 
-# Initialize Model Manager
+# Initialize Model Manager (singleton — loaded once at module import, reused for all requests)
 model_manager = ModelManager()
 
 
 # ── Health / Liveness Endpoint ─────────────────────────────────────────────
 # Required by render.yaml (healthCheckPath: /health) and the keepalive workflow.
+# MUST remain lightweight — no ML inference, no DB queries, no file I/O.
 @app.get("/health", tags=["Health"])
 async def health_check():
-    """Lightweight liveness probe for Render and the GitHub Actions keepalive cron."""
+    """Lightweight liveness probe for Render and the GitHub Actions keepalive cron.
+
+    Returns HTTP 200 with status='healthy' as soon as the application is running.
+    The frontend polls this endpoint to detect Render cold-start completion before
+    submitting the expensive /analyze request.
+    """
     return {
-        "status": "ok",
+        "status": "healthy",
         "service": "TonyCV API",
         "version": app.version,
+        "environment": os.environ.get("RENDER_ENV", "development"),
+    }
+
+
+@app.get("/health/live", tags=["Health"])
+async def health_live():
+    """Liveness probe — confirms FastAPI process is alive and accepting requests."""
+    return {"status": "alive", "timestamp": time.time()}
+
+
+@app.get("/health/ready", tags=["Health"])
+async def health_ready():
+    """Readiness probe — confirms application is ready for business requests."""
+    db_ok = True
+    try:
+        auth_db.get_db_connection().close()
+    except Exception:
+        db_ok = False
+
+    return {
+        "status": "ready" if db_ok else "degraded",
+        "database": "connected" if db_ok else "error",
+        "models_loaded": (
+            model_manager.is_trained if hasattr(model_manager, "is_trained") else True
+        ),
+        "timestamp": time.time(),
     }
 
 
 @app.get("/", tags=["Health"])
 async def root():
-    """Root redirect — keeps the service warm and provides a discovery link."""
+    """Root endpoint — service discovery and warm-up ping."""
     return {
-        "message": "Welcome to TonyCV API",
+        "service": "TonyCV API",
+        "status": "running",
         "docs": "/docs",
         "health": "/health",
     }
@@ -312,22 +366,65 @@ async def keep_alive_task():
 
 @app.on_event("startup")
 async def startup_event():
-    logger.info("Application starting up...")
+    _t0 = time.time()
+    logger.info("startup_begin", extra={"stage": "startup", "status": "begin"})
     try:
-        # Initialize auth database
+        # Phase 1: Database initialization
+        _t1 = time.time()
         auth_db.init_db()
         resume_history_db.init_db()
-        # Attempt to load or train models on startup
+        logger.info(
+            "startup_db_ready",
+            extra={
+                "stage": "db_init",
+                "status": "complete",
+                "duration_s": round(time.time() - _t1, 2),
+            },
+        )
+
+        # Phase 2: ML Model loading
+        _t2 = time.time()
         if not model_manager.load_models():
-            logger.info("Models not found. Training on startup...")
+            logger.info(
+                "startup_model_train_begin",
+                extra={"stage": "model_train", "status": "begin"},
+            )
             model_manager.train_models()
+            logger.info(
+                "startup_model_train_complete",
+                extra={
+                    "stage": "model_train",
+                    "status": "complete",
+                    "duration_s": round(time.time() - _t2, 2),
+                },
+            )
+        else:
+            logger.info(
+                "startup_model_loaded",
+                extra={
+                    "stage": "model_load",
+                    "status": "complete",
+                    "duration_s": round(time.time() - _t2, 2),
+                },
+            )
     except Exception as exc:
-        logger.error(f"Error during startup initialization: {exc}", exc_info=True)
+        logger.error(
+            "startup_error",
+            extra={"stage": "startup", "status": "error", "error": str(exc)},
+            exc_info=True,
+        )
 
     # Start the keep-alive background task
     asyncio.create_task(keep_alive_task())
 
-    logger.info("Startup complete.")
+    logger.info(
+        "startup_complete",
+        extra={
+            "stage": "startup",
+            "status": "complete",
+            "total_duration_s": round(time.time() - _t0, 2),
+        },
+    )
 
 
 @app.get("/companies")

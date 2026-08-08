@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { analyzeResume } from '../services/resumeAnalysis';
+import { classifyError } from '../utils/errorClassifier';
 import { AnimatePresence, motion } from 'framer-motion';
 import InputForm from '../components/InputForm';
 import {
@@ -400,10 +402,12 @@ export default function Analyze() {
   const [skillInput, setSkillInput] = useState('');
   const [builderStep, setBuilderStep] = useState(0);
 
-  // Upload & analyze
+  // Upload & analyze state
   const [isLoading, setIsLoading] = useState(false);
+  const [analysisStage, setAnalysisStage] = useState(null);
   const [error, setError] = useState('');
   const [companies, setCompanies] = useState(FALLBACK_COMPANIES);
+  const abortControllerRef = useRef(null);
 
   const photoRef = useRef(null);
 
@@ -413,24 +417,40 @@ export default function Analyze() {
   }, []);
 
   // Handle analyze (upload path)
+  // Flow: poll /health → backend wakes → POST /analyze once → navigate
   const handleAnalyze = async (formData) => {
+    // Cancel any in-flight request from a previous attempt
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setIsLoading(true);
+    setAnalysisStage('connecting');
     setError('');
     try {
-      const res = await api.post(`/analyze`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const data = await analyzeResume(formData, setAnalysisStage, controller.signal);
       const uploadedFile = formData.get('cv_file');
-      await saveAnalysisHistory(res.data, uploadedFile?.name || 'Uploaded resume');
-      navigate('/dashboard', { state: { analysisData: res.data } });
+      await saveAnalysisHistory(data, uploadedFile?.name || 'Uploaded resume');
+      navigate('/dashboard', { state: { analysisData: data } });
     } catch (err) {
-      setError(err?.response?.data?.detail || 'Analysis failed. Please try again.');
+      if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
+        setError(classifyError(err));
+      }
     } finally {
       setIsLoading(false);
+      setAnalysisStage(null);
     }
   };
 
   // Generate PDF from scratch builder and send to /analyze
   const handleScratchAnalyze = async () => {
+    // Cancel any in-flight request from a previous attempt
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setIsLoading(true);
+    setAnalysisStage('connecting');
     setError('');
     try {
       const el = document.getElementById('live-resume-preview');
@@ -440,13 +460,16 @@ export default function Analyze() {
       fd.append('cv_file', file);
       fd.append('target_company', FALLBACK_COMPANIES[0] || 'Google');
       fd.append('job_description', '');
-      const res = await api.post(`/analyze`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      await saveAnalysisHistory(res.data, resumeData.name ? `${resumeData.name} resume` : 'Built resume');
-      navigate('/dashboard', { state: { analysisData: res.data } });
+      const data = await analyzeResume(fd, setAnalysisStage, controller.signal);
+      await saveAnalysisHistory(data, resumeData.name ? `${resumeData.name} resume` : 'Built resume');
+      navigate('/dashboard', { state: { analysisData: data } });
     } catch (err) {
-      setError(err?.response?.data?.detail || 'Could not analyse your resume. Please try again.');
+      if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
+        setError(classifyError(err));
+      }
     } finally {
       setIsLoading(false);
+      setAnalysisStage(null);
     }
   };
 
@@ -925,7 +948,7 @@ export default function Analyze() {
                 </motion.div>
               )}
 
-              <InputForm onAnalyze={handleAnalyze} isLoading={isLoading} companies={companies} />
+              <InputForm onAnalyze={handleAnalyze} isLoading={isLoading} companies={companies} analysisStage={analysisStage} />
             </motion.div>
           )}
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import api from '../services/api';
+import { ensureBackendReady } from '../services/backendReady';
 
 function getCurrentUser() {
   try {
@@ -73,14 +74,18 @@ export default function ResumeHistoryPage() {
   useEffect(() => {
     if (!user?.id) return;
     setLoading(true);
-    api.get(`/resume-history/${user.id}`)
+    ensureBackendReady()
+      .then(isReady => {
+        if (!isReady) throw new Error('Backend not ready');
+        return api.get(`/resume-history/${user.id}`);
+      })
       .then(res => {
         const items = res.data?.versions || [];
         setVersions(items);
         if (items[1]) setBaseId(String(items[1].id));
         if (items[0]) setTargetId(String(items[0].id));
       })
-      .catch(() => setError('Could not load resume history.'))
+      .catch(() => setError('Could not load resume history. Server may be warming up.'))
       .finally(() => setLoading(false));
   }, [user?.id]);
 
@@ -94,6 +99,11 @@ export default function ResumeHistoryPage() {
     setComparison(null);
     setLoading(true);
     try {
+      const isReady = await ensureBackendReady();
+      if (!isReady) {
+        setError('TonyCV server is taking longer than expected to wake up. Please try again.');
+        return;
+      }
       const res = await api.post('/resume-history/compare', {
         user_id: user.id,
         base_version_id: Number(baseId),

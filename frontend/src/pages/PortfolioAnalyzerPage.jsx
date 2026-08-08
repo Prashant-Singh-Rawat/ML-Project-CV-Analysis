@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+import api from '../services/api';
+import { ensureBackendReady } from '../services/backendReady';
+import { classifyError } from '../utils/errorClassifier';
 
 export default function PortfolioAnalyzerPage() {
   const [form, setForm] = useState({ github_url: '', linkedin_url: '', leetcode_user: '', codeforces_user: '', hackerrank_user: '' });
@@ -23,23 +24,23 @@ export default function PortfolioAnalyzerPage() {
     setPortfolioResult(null);
 
     try {
+      const isReady = await ensureBackendReady();
+      if (!isReady) {
+        setError('TonyCV server is taking longer than expected to wake up. Please try again.');
+        return;
+      }
+
       const [githubRes, portfolioRes] = await Promise.all([
-        form.github_url ? fetch(`${API}/features/github-stats`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ github_url: form.github_url }),
-        }) : Promise.resolve(null),
-        fetch(`${API}/features/portfolio-analyze`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(form),
-        }),
+        form.github_url
+          ? api.post('/features/github-stats', { github_url: form.github_url })
+          : Promise.resolve(null),
+        api.post('/features/portfolio-analyze', form),
       ]);
 
-      if (githubRes) setGithubResult(await githubRes.json());
-      setPortfolioResult(await portfolioRes.json());
-    } catch {
-      setError('Failed to analyze portfolio. Please try again.');
+      if (githubRes) setGithubResult(githubRes.data);
+      if (portfolioRes) setPortfolioResult(portfolioRes.data);
+    } catch (err) {
+      setError(err.response?.data?.detail || classifyError(err));
     } finally {
       setLoading(false);
     }

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+import api from '../services/api';
+import { ensureBackendReady } from '../services/backendReady';
+import { classifyError } from '../utils/errorClassifier';
 
 export default function JdMatchPage() {
   const [cvText, setCvText] = useState('');
@@ -17,19 +18,19 @@ export default function JdMatchPage() {
     setLoading(true);
     setResult(null);
     try {
-      const res = await fetch(`${API}/features/jd-match`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cv_text: cvText,
-          job_description: jd,
-          candidate_skills: skills.split(',').map(s => s.trim()).filter(Boolean),
-        }),
+      const isReady = await ensureBackendReady();
+      if (!isReady) {
+        setError('TonyCV server is taking longer than expected to wake up. Please try again.');
+        return;
+      }
+      const res = await api.post('/features/jd-match', {
+        cv_text: cvText,
+        job_description: jd,
+        candidate_skills: skills.split(',').map(s => s.trim()).filter(Boolean),
       });
-      if (!res.ok) throw new Error();
-      setResult(await res.json());
-    } catch {
-      setError('Failed to run JD match. Please try again.');
+      setResult(res.data);
+    } catch (err) {
+      setError(err.response?.data?.detail || classifyError(err));
     } finally {
       setLoading(false);
     }

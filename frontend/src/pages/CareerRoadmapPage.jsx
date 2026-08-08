@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+import api from '../services/api';
+import { ensureBackendReady } from '../services/backendReady';
+import { classifyError } from '../utils/errorClassifier';
 
 const ROLES = ['Software Engineer', 'Data Scientist', 'ML Engineer', 'Frontend Developer', 'Backend Developer', 'Full Stack Developer', 'DevOps Engineer'];
 const EXP_LEVELS = ['fresher', 'experienced', 'highly_experienced'];
@@ -20,19 +21,19 @@ export default function CareerRoadmapPage() {
     setLoading(true);
     setResult(null);
     try {
-      const res = await fetch(`${API}/features/roadmap`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          current_skills: skills.split(',').map(s => s.trim()).filter(Boolean),
-          desired_role: role,
-          experience_level: expLevel,
-        }),
+      const isReady = await ensureBackendReady();
+      if (!isReady) {
+        setError('TonyCV server is taking longer than expected to wake up. Please try again.');
+        return;
+      }
+      const res = await api.post('/features/roadmap', {
+        current_skills: skills.split(',').map(s => s.trim()).filter(Boolean),
+        desired_role: role,
+        experience_level: expLevel,
       });
-      if (!res.ok) throw new Error();
-      setResult(await res.json());
-    } catch {
-      setError('Failed to generate roadmap. Please try again.');
+      setResult(res.data);
+    } catch (err) {
+      setError(err.response?.data?.detail || classifyError(err));
     } finally {
       setLoading(false);
     }

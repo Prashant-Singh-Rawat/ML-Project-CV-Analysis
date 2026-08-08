@@ -15,5 +15,15 @@ services:
         generateValue: true
       - key: PYTHONUNBUFFERED
         value: "1"
+      # Production frontend URL for CORS allowlist.
+      # Add comma-separated origins if you have additional frontends.
+      - key: ALLOWED_ORIGINS
+        value: "https://tonyaicv.netlify.app"
+      # Used by the keep-alive self-ping task inside main.py.
+      - key: RENDER_EXTERNAL_URL
+        value: "https://tonycv-backend.onrender.com"
+      # Environment label surfaced in /health response.
+      - key: RENDER_ENV
+        value: "production"
     healthCheckPath: /health
     autoDeploy: true
