@@ -4,19 +4,6 @@ import re
 import pdfplumber
 
 from ml_pipeline.synthetic_data import SKILLS_DB
-from ml_pipeline.career_trajectory import get_trajectory_model
-
-def _extract_mock_roles(text: str) -> list:
-    """Mock extractor to identify past roles from text for sequence modeling."""
-    roles = []
-    # simple heuristic for common tech titles
-    common_roles = ["software engineer", "senior software engineer", "data analyst", "data scientist", "junior developer", "lead engineer"]
-    for role in common_roles:
-        if role in text.lower():
-            roles.append(role)
-    # Return at least something so the trajectory model has data
-    return roles if roles else ["software engineer"]
-
 
 # ── Known tech companies / organisations for lightweight NER ─────────────────
 _KNOWN_ORGS = [
@@ -147,6 +134,14 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
     return text
 
 
+from ml_pipeline.tone_analyzer import extract_summary_section, analyze_tone
+
+# Fallback mocks in case previous PRs aren't fully merged into this branch
+def redact_pii(text, entities): return text
+class MockKG:
+    def infer_implicit_skills(self, skills): return []
+def get_skill_knowledge_graph(): return MockKG()
+
 def parse_cv_text(text: str) -> dict[str, any]:
     """
     Main parser function that takes raw CV text and returns parsed structured data.
@@ -154,22 +149,24 @@ def parse_cv_text(text: str) -> dict[str, any]:
     skills = extract_skills(text)
     entities = extract_entities(text)
     
-    # Analyze trajectory using sequence models
-    historical_roles = _extract_mock_roles(text)
-    trajectory_model = get_trajectory_model()
-    trajectory_forecast = trajectory_model.predict_next_role(historical_roles)
+    # Analyze tone from summary
+    summary = extract_summary_section(text)
+    tone_analysis = analyze_tone(summary)
+
 
     # Simple word count using split (no spacy needed)
     word_count = len([w for w in re.split(r"\s+", text) if w.strip()])
 
     return {
         "skills": skills,
+        "implicit_skills": implicit_skills,
+        "summary": summary,
+        "tone_analysis": tone_analysis,
         "organizations": entities["ORG"],
         "persons": entities["PERSON"],
         "locations": entities["GPE"],
         "word_count": word_count,
         "raw_text": text,
-        "trajectory_forecast": trajectory_forecast
     }
 
 
