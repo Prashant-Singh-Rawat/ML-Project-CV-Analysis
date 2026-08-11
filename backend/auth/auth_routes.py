@@ -1,12 +1,13 @@
 import os
 from datetime import datetime
+from urllib.parse import urlencode
 
 import httpx
 from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
-from . import auth_utils, user_db
+from . import auth_utils, oauth_store, user_db
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -283,21 +284,38 @@ async def github_login():
             status_code=500, detail="GitHub OAuth is not configured on this server."
         )
 
-    # Redirect to GitHub authorization page
-    redirect_uri = f"https://github.com/login/oauth/authorize?client_id={client_id}&scope=user:email"
-    return RedirectResponse(url=redirect_uri)
+    state = oauth_store.create_oauth_state()
+    params = urlencode(
+        {
+            "client_id": client_id,
+            "scope": "user:email",
+            "state": state,
+        }
+    )
+    return RedirectResponse(
+        url=f"https://github.com/login/oauth/authorize?{params}"
+    )
 
 
 @router.get("/github/callback", summary="Handle GitHub OAuth Callback")
-async def github_callback(code: str, request: Request):
+async def github_callback(
+    code: str,
+    request: Request,
+    state: str | None = None,
+):
     client_id = os.environ.get("GITHUB_CLIENT_ID")
     client_secret = os.environ.get("GITHUB_CLIENT_SECRET")
     frontend_url = os.environ.get(
         "FRONTEND_URL", "https://prashant-singh-rawat.github.io/ML-Project-CV-Analysis"
-    )
+    ).rstrip("/")
 
     if not client_id or not client_secret:
         raise HTTPException(status_code=500, detail="GitHub OAuth is not configured.")
+
+    if not oauth_store.consume_oauth_state(state):
+        raise HTTPException(
+            status_code=400, detail="Invalid or expired OAuth state. Please try again."
+        )
 
     async with httpx.AsyncClient() as client:
         # 1. Exchange code for access token
@@ -371,17 +389,27 @@ async def github_callback(code: str, request: Request):
                 status_code=500, detail="Failed to create GitHub account."
             )
 
-    # Generate JWT token
-    token = auth_utils.create_access_token(
-        {
-            "sub": user["email"],
-            "device": device_fingerprint,
-            "name": user["name"],
-        }
-    )
+    session = _build_token_response(user, device_fingerprint)
+    auth_code = oauth_store.create_auth_code(session)
+    return RedirectResponse(url=f"{frontend_url}/?auth_code={auth_code}")
 
-    # Redirect to frontend with the token
-    return RedirectResponse(url=f"{frontend_url}/?token={token}")
+
+class GitHubExchangeRequest(BaseModel):
+    auth_code: str
+
+
+@router.post(
+    "/github/exchange",
+    response_model=TokenResponse,
+    summary="Exchange one-time GitHub auth code for a JWT session",
+)
+async def github_exchange(req: GitHubExchangeRequest):
+    session = oauth_store.consume_auth_code(req.auth_code)
+    if not session:
+        raise HTTPException(
+            status_code=400, detail="Invalid or expired auth code. Please sign in again."
+        )
+    return session
 
 
 @router.get("/me", summary="Get current user info")
