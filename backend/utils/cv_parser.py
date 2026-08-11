@@ -6,7 +6,6 @@ import pdfplumber
 from ml_pipeline.synthetic_data import SKILLS_DB
 from ml_pipeline.anomaly_detector import get_anomaly_detector
 from ml_pipeline.question_generator import generate_interview_questions
-from ml_pipeline.contrastive_matcher import get_contrastive_matcher
 
 # ── Known tech companies / organisations for lightweight NER ─────────────────
 _KNOWN_ORGS = [
@@ -160,13 +159,13 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
     return text
 
 
-def parse_cv_text(text: str, jd_text: str = None) -> dict[str, any]:
+def parse_cv_text(text: str) -> dict[str, any]:
     """
     Main parser function that takes raw CV text and returns parsed structured data.
     """
     skills = extract_skills(text)
     entities = extract_entities(text)
-
+    
     # Anomaly Detection
     years, seniority = _estimate_experience_and_seniority(text)
     anomaly_detector = get_anomaly_detector()
@@ -175,12 +174,6 @@ def parse_cv_text(text: str, jd_text: str = None) -> dict[str, any]:
     # Generative AI Interview Questions
     summary = _extract_mock_summary(text)
     interview_questions = generate_interview_questions(skills, summary)
-    
-    # JD Matching
-    jd_match_result = None
-    if jd_text:
-        jd_matcher = get_contrastive_matcher()
-        jd_match_result = jd_matcher.match_cv_to_jd(text, jd_text)
 
     # Simple word count using split (no spacy needed)
     word_count = len([w for w in re.split(r"\s+", text) if w.strip()])
@@ -193,8 +186,7 @@ def parse_cv_text(text: str, jd_text: str = None) -> dict[str, any]:
         "word_count": word_count,
         "raw_text": text,
         "work_history_anomalies": anomalies,
-        "interview_questions": interview_questions,
-        "jd_match_result": jd_match_result
+        "interview_questions": interview_questions
     }
 
 
