@@ -9,6 +9,7 @@ import urllib.request
 from auth import resume_history_db
 from auth import user_db as auth_db
 from auth.auth_routes import router as auth_router
+from routers import federated
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -79,6 +80,8 @@ app.include_router(auth_router)
 
 app.include_router(features_router)
 app.include_router(resume_history_router)
+app.include_router(federated.router)
+
 
 # Initialize Model Manager (singleton — loaded once at module import, reused for all requests)
 model_manager = ModelManager()
