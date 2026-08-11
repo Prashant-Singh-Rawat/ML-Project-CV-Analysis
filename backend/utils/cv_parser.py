@@ -70,62 +70,25 @@ _KNOWN_LOCS = [
 ]
 
 
-from transformers import pipeline
-
-# Load RoBERTa NER pipeline for skill extraction (lazy loading to save memory on startup)
-_roberta_ner_pipeline = None
-
-def get_roberta_pipeline():
-    global _roberta_ner_pipeline
-    if _roberta_ner_pipeline is None:
-        try:
-            # Using a generic RoBERTa NER model; in production, this would be a fine-tuned model for skills
-            _roberta_ner_pipeline = pipeline("ner", model="Jean-Baptiste/roberta-large-ner-english", aggregation_strategy="simple")
-        except Exception as e:
-            print(f"Error loading RoBERTa pipeline: {e}")
-            _roberta_ner_pipeline = False
-    return _roberta_ner_pipeline
-
 def extract_skills(text: str) -> list[str]:
     """
-    Extracts skills from text based on a predefined skills taxonomy and RoBERTa NER pipeline.
+    Extracts skills from text based on a predefined skills taxonomy.
     Handles variations like 'NodeJS' vs 'Node.js' and ensures word boundaries.
     """
     text_processed = text.replace(".", " ").replace("/", " ").replace("-", " ")
     text_lower = text_processed.lower()
-    found_skills = set()
+    found_skills = []
 
-    # 1. Regex/Taxonomy based extraction (fast path)
     for skill in SKILLS_DB:
         skill_clean = skill.lower().replace(".", " ").replace("-", " ")
         pattern = r"\b" + re.escape(skill_clean) + r"\b"
-        if re.search(pattern, text_lower):
-            found_skills.add(skill)
-        elif skill.lower() in text_lower:
-            if len(skill) > 2:
-                found_skills.add(skill)
-                
-    # 2. RoBERTa NER based extraction (advanced semantic path)
-    ner_pipe = get_roberta_pipeline()
-    if ner_pipe:
-        try:
-            # Truncate text to avoid exceeding max sequence length of RoBERTa (usually 512 tokens)
-            # A simple character truncation as approximation
-            truncated_text = text[:2000]
-            ner_results = ner_pipe(truncated_text)
-            
-            for entity in ner_results:
-                # Typically skills might be recognized under various entity types depending on the model,
-                # e.g., 'MISC' or custom 'SKILL' tags in a fine-tuned model.
-                if entity['entity_group'] in ['MISC', 'ORG', 'SKILL']:
-                    extracted_word = entity['word'].strip()
-                    if len(extracted_word) > 2 and extracted_word.lower() not in [s.lower() for s in found_skills]:
-                        # Optional: check against an expanded dictionary or just accept as candidate skill
-                        found_skills.add(extracted_word)
-        except Exception as e:
-            print(f"RoBERTa NER extraction failed: {e}")
 
-    return list(found_skills)
+        if re.search(pattern, text_lower):
+            found_skills.append(skill)
+        elif skill.lower() in text_lower and len(skill) > 2:
+            found_skills.append(skill)
+
+    return list(set(found_skills))
 
 
 def extract_entities(text: str) -> dict[str, list[str]]:
@@ -160,82 +123,42 @@ def extract_entities(text: str) -> dict[str, list[str]]:
 
 def extract_text_from_pdf(file_bytes: bytes) -> str:
     """
-    Extracts text from a PDF file using pdfplumber and applies OCR error correction.
+    Extracts text from a PDF file using pdfplumber.
     """
-    from ml_pipeline.ocr_corrector import correct_ocr_text
-    
     text = ""
     with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
         for page in pdf.pages:
             page_text = page.extract_text()
             if page_text:
                 text += page_text + "\n"
-                
-    # Apply ML-based sequence-to-sequence OCR error correction
-    cleaned_text = correct_ocr_text(text)
-    return cleaned_text
+    return text
 
 
-# Load Zero-Shot Classification pipeline for inferring job roles
-_zero_shot_pipeline = None
-
-def get_zero_shot_pipeline():
-    global _zero_shot_pipeline
-    if _zero_shot_pipeline is None:
-        try:
-            _zero_shot_pipeline = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
-        except Exception as e:
-            print(f"Error loading zero-shot pipeline: {e}")
-            _zero_shot_pipeline = False
-    return _zero_shot_pipeline
-
-ONET_JOB_ROLES = [
-    "Software Developer",
-    "Data Scientist",
-    "Machine Learning Engineer",
-    "Frontend Developer",
-    "Backend Developer",
-    "DevOps Engineer",
-    "Product Manager",
-    "Database Administrator",
-    "Cybersecurity Analyst",
-    "Cloud Architect"
-]
-
-def infer_job_role(text: str) -> str:
-    """
-    Infers the standard O*NET job role using a zero-shot classification model.
-    """
-    classifier = get_zero_shot_pipeline()
-    if classifier:
-        try:
-            # Evaluate the first 2000 characters which usually contain the summary/experience
-            truncated_text = text[:2000]
-            result = classifier(truncated_text, candidate_labels=ONET_JOB_ROLES)
-            # Return the highest scoring role
-            return result["labels"][0]
-        except Exception as e:
-            print(f"Zero-shot classification failed: {e}")
-            
-    return "Unknown Role"
-
-def parse_cv_text(text: str) -> dict[str, any]:
+def parse_cv_text(text: str, jd_text: str = None, use_llama_extractor: bool = False) -> dict[str, any]:
     """
     Main parser function that takes raw CV text and returns parsed structured data.
     """
-    skills = extract_skills(text)
+    if use_llama_extractor:
+        from ml_pipeline.llama_extractor import get_llama_extractor
+        extractor = get_llama_extractor()
+        llama_result = extractor.extract_skills_and_proficiency(text)
+        skills = [s['skill'] for s in llama_result.get('skills', [])]
+        llama_proficiency_data = llama_result.get('skills', [])
+    else:
+        skills = extract_skills(text)
+        llama_proficiency_data = None
+        
     entities = extract_entities(text)
-    inferred_role = infer_job_role(text)
 
     # Simple word count using split (no spacy needed)
     word_count = len([w for w in re.split(r"\s+", text) if w.strip()])
 
     return {
         "skills": skills,
+        "llama_proficiency_data": llama_proficiency_data,
         "organizations": entities["ORG"],
         "persons": entities["PERSON"],
         "locations": entities["GPE"],
-        "inferred_role": inferred_role,
         "word_count": word_count,
         "raw_text": text,
     }
