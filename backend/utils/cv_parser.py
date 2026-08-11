@@ -134,7 +134,46 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
     return text
 
 
-from ml_pipeline.knowledge_graph import get_skill_knowledge_graph
+def redact_pii(text: str, entities: dict[str, list[str]]) -> str:
+    """
+    Redacts Personally Identifiable Information (PII) to mitigate bias.
+    Redacts Names (PERSON), specific dates/years (age/graduation bias), 
+    and gendered pronouns.
+    """
+    debiased_text = text
+    
+    # 1. Redact extracted names
+    for name in entities.get("PERSON", []):
+        debiased_text = re.sub(r"\b" + re.escape(name) + r"\b", "[REDACTED_NAME]", debiased_text, flags=re.IGNORECASE)
+        
+    # 2. Redact years (e.g., graduation years, birth years) to prevent age bias
+    # Looks for years between 1950 and 2050
+    debiased_text = re.sub(r"\b(19[5-9]\d|20[0-4]\d)\b", "[REDACTED_YEAR]", debiased_text)
+    
+    # 3. Redact gendered pronouns (He/She, Him/Her, His/Hers)
+    gender_replacements = {
+        r"\bhe\b": "they",
+        r"\bshe\b": "they",
+        r"\bhim\b": "them",
+        r"\bher\b": "them",
+        r"\bhis\b": "their",
+        r"\bhers\b": "theirs",
+        r"\bhimslef\b": "themself",
+        r"\bherself\b": "themself"
+    }
+    
+    for pattern, replacement in gender_replacements.items():
+        # Case insensitive replacement, but trying to preserve some casing is complex; 
+        # for ML models, lowercasing or just substituting is usually enough.
+        debiased_text = re.sub(pattern, replacement, debiased_text, flags=re.IGNORECASE)
+        
+    # 4. Redact potential affiliated organizations that could infer ethnicity/gender
+    biased_org_keywords = ["women", "black", "hispanic", "asian", "christian", "muslim", "jewish", "lgbt", "queer"]
+    for org in entities.get("ORG", []):
+        if any(keyword in org.lower() for keyword in biased_org_keywords):
+            debiased_text = re.sub(r"\b" + re.escape(org) + r"\b", "[REDACTED_AFFILIATION]", debiased_text, flags=re.IGNORECASE)
+
+    return debiased_text
 
 def parse_cv_text(text: str) -> dict[str, any]:
     """
@@ -143,22 +182,18 @@ def parse_cv_text(text: str) -> dict[str, any]:
     skills = extract_skills(text)
     entities = extract_entities(text)
     debiased_text = redact_pii(text, entities)
-    
-    # Infer implicit skills using Knowledge Graph
-    kg = get_skill_knowledge_graph()
-    implicit_skills = kg.infer_implicit_skills(skills)
 
     # Simple word count using split (no spacy needed)
     word_count = len([w for w in re.split(r"\s+", text) if w.strip()])
 
     return {
         "skills": skills,
-        "implicit_skills": implicit_skills,
         "organizations": entities["ORG"],
         "persons": entities["PERSON"],
         "locations": entities["GPE"],
         "word_count": word_count,
         "raw_text": text,
+        "debiased_text": debiased_text
     }
 
 
