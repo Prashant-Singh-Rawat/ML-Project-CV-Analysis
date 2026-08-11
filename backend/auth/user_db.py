@@ -131,23 +131,37 @@ def update_last_login(email: str):
     conn.close()
 
 
-def increment_failed_attempts(email: str):
-    """Increment failed login attempts and lock account after 5 failures."""
+def increment_failed_attempts(email: str) -> int:
+    """Atomically increment failed login attempts and lock after 5 failures.
+
+    Returns the updated failed_attempts count (0 if the user row is missing).
+    """
     conn = get_connection()
-    c = conn.cursor()
-    c.execute("SELECT failed_attempts FROM users WHERE email = ?", (email,))
-    row = c.fetchone()
-    if row:
-        attempts = row[0] + 1
-        locked_until = None
-        if attempts >= 5:
-            locked_until = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
+    try:
+        c = conn.cursor()
+        c.execute("BEGIN IMMEDIATE")
+        locked_until = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
         c.execute(
-            "UPDATE users SET failed_attempts = ?, locked_until = ? WHERE email = ?",
-            (attempts, locked_until, email),
+            """
+            UPDATE users
+            SET failed_attempts = failed_attempts + 1,
+                locked_until = CASE
+                    WHEN failed_attempts + 1 >= 5 THEN ?
+                    ELSE locked_until
+                END
+            WHERE email = ?
+            """,
+            (locked_until, email),
         )
+        c.execute("SELECT failed_attempts FROM users WHERE email = ?", (email,))
+        row = c.fetchone()
         conn.commit()
-    conn.close()
+        return int(row[0]) if row else 0
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def reset_failed_attempts(email: str):
