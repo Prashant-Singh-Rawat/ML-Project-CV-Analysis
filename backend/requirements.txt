@@ -13,4 +13,4 @@ python-json-logger>=2.0.7
 fpdf
 httpx>=0.27.0
 
-networkx>=3.2.1
+sentence-transformers>=2.5.1

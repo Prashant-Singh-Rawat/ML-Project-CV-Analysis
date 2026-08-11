@@ -236,6 +236,65 @@ def semantic_skill_match(
         return _keyword_fallback(candidate_skills, required_skills)
 
 
+def semantic_experience_match(
+    candidate_bullets: list, job_requirements: list, similarity_threshold: float = 0.50
+) -> dict:
+    """
+    Calculates semantic similarity between candidate experience bullet points 
+    and specific job requirements using Sentence Transformers.
+    """
+    if not job_requirements:
+        return {"match_score": 100.0, "details": [], "engine": "none"}
+    if not candidate_bullets:
+        return {
+            "match_score": 0.0, 
+            "details": [{"requirement": req, "best_bullet": None, "score": 0.0} for req in job_requirements],
+            "engine": "none"
+        }
+
+    model = _get_model()
+    if model is None:
+        return {"error": "BERT model unavailable for experience matching", "engine": "keyword"}
+
+    try:
+        from sentence_transformers import util
+        cand_emb = model.encode(candidate_bullets, convert_to_tensor=True)
+        req_emb = model.encode(job_requirements, convert_to_tensor=True)
+        cos = util.cos_sim(req_emb, cand_emb)
+
+        details = []
+        total_score = 0.0
+
+        for i, req in enumerate(job_requirements):
+            scores = cos[i].cpu().numpy()
+            best_idx = int(np.argmax(scores))
+            best_score = float(scores[best_idx])
+            best_bullet = candidate_bullets[best_idx]
+
+            details.append({
+                "requirement": req,
+                "best_bullet": best_bullet if best_score >= similarity_threshold else None,
+                "score": round(best_score * 100, 1),
+                "matched": best_score >= similarity_threshold
+            })
+            
+            # Add to total score if matched, otherwise add partial credit
+            total_score += best_score if best_score > 0 else 0
+
+        # Calculate average alignment score across all requirements
+        avg_score = (total_score / len(job_requirements)) * 100
+        
+        return {
+            "match_score": round(min(100.0, avg_score), 2),
+            "details": details,
+            "engine": "bert"
+        }
+    except Exception as exc:
+        logger.error(f"[BERT] Experience inference failed: {exc}")
+        return {"error": str(exc), "engine": "error"}
+
+
+
 if __name__ == "__main__":
     result = semantic_skill_match(
         ["neural networks", "deep learning", "Python", "built REST APIs"],
