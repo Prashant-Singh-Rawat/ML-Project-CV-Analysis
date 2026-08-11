@@ -1,122 +1,98 @@
 import io
 import re
+import sys
 
 import pdfplumber
+import spacy
+
+# Load small english model. If not installed, you can use fallbacks or install it.
+try:
+    nlp = spacy.load("en_core_web_sm")
+except OSError:
+    # If not found, download it or fallback to basic parsing
+    import subprocess
+
+    print("Downloading spaCy model 'en_core_web_sm'...")
+    subprocess.run([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
+    try:
+        nlp = spacy.load("en_core_web_sm")
+    except OSError:
+        # Final fallback to a blank model if all else fails
+        print("Failed to download model. Falling back to blank English model.")
+        nlp = spacy.blank("en")
 
 from ml_pipeline.synthetic_data import SKILLS_DB
 
-# ── Known tech companies / organisations for lightweight NER ─────────────────
-_KNOWN_ORGS = [
-    "Google",
-    "Amazon",
-    "Microsoft",
-    "Meta",
-    "Apple",
-    "Netflix",
-    "Uber",
-    "Airbnb",
-    "Twitter",
-    "LinkedIn",
-    "Salesforce",
-    "Adobe",
-    "Oracle",
-    "IBM",
-    "Intel",
-    "NVIDIA",
-    "Qualcomm",
-    "Samsung",
-    "Sony",
-    "Accenture",
-    "Infosys",
-    "TCS",
-    "Wipro",
-    "HCL",
-    "Cognizant",
-    "Capgemini",
-    "Deloitte",
-    "McKinsey",
-    "BCG",
-    "Bain",
-    "JPMorgan",
-    "Goldman Sachs",
-    "Morgan Stanley",
-]
 
-_KNOWN_LOCS = [
-    "India",
-    "USA",
-    "United States",
-    "UK",
-    "United Kingdom",
-    "Germany",
-    "France",
-    "Canada",
-    "Australia",
-    "Singapore",
-    "Japan",
-    "China",
-    "Bangalore",
-    "Mumbai",
-    "Delhi",
-    "Hyderabad",
-    "Chennai",
-    "Pune",
-    "New York",
-    "San Francisco",
-    "London",
-    "Berlin",
-    "Seattle",
-    "Austin",
-]
+from transformers import pipeline
 
+# Load RoBERTa NER pipeline for skill extraction (lazy loading to save memory on startup)
+_roberta_ner_pipeline = None
+
+def get_roberta_pipeline():
+    global _roberta_ner_pipeline
+    if _roberta_ner_pipeline is None:
+        try:
+            # Using a generic RoBERTa NER model; in production, this would be a fine-tuned model for skills
+            _roberta_ner_pipeline = pipeline("ner", model="Jean-Baptiste/roberta-large-ner-english", aggregation_strategy="simple")
+        except Exception as e:
+            print(f"Error loading RoBERTa pipeline: {e}")
+            _roberta_ner_pipeline = False
+    return _roberta_ner_pipeline
 
 def extract_skills(text: str) -> list[str]:
     """
-    Extracts skills from text based on a predefined skills taxonomy.
+    Extracts skills from text based on a predefined skills taxonomy and RoBERTa NER pipeline.
     Handles variations like 'NodeJS' vs 'Node.js' and ensures word boundaries.
     """
     text_processed = text.replace(".", " ").replace("/", " ").replace("-", " ")
     text_lower = text_processed.lower()
-    found_skills = []
+    found_skills = set()
 
+    # 1. Regex/Taxonomy based extraction (fast path)
     for skill in SKILLS_DB:
         skill_clean = skill.lower().replace(".", " ").replace("-", " ")
         pattern = r"\b" + re.escape(skill_clean) + r"\b"
-
         if re.search(pattern, text_lower):
-            found_skills.append(skill)
-        elif skill.lower() in text_lower and len(skill) > 2:
-            found_skills.append(skill)
+            found_skills.add(skill)
+        elif skill.lower() in text_lower:
+            if len(skill) > 2:
+                found_skills.add(skill)
+                
+    # 2. RoBERTa NER based extraction (advanced semantic path)
+    ner_pipe = get_roberta_pipeline()
+    if ner_pipe:
+        try:
+            # Truncate text to avoid exceeding max sequence length of RoBERTa (usually 512 tokens)
+            # A simple character truncation as approximation
+            truncated_text = text[:2000]
+            ner_results = ner_pipe(truncated_text)
+            
+            for entity in ner_results:
+                # Typically skills might be recognized under various entity types depending on the model,
+                # e.g., 'MISC' or custom 'SKILL' tags in a fine-tuned model.
+                if entity['entity_group'] in ['MISC', 'ORG', 'SKILL']:
+                    extracted_word = entity['word'].strip()
+                    if len(extracted_word) > 2 and extracted_word.lower() not in [s.lower() for s in found_skills]:
+                        # Optional: check against an expanded dictionary or just accept as candidate skill
+                        found_skills.add(extracted_word)
+        except Exception as e:
+            print(f"RoBERTa NER extraction failed: {e}")
 
-    return list(set(found_skills))
+    return list(found_skills)
 
 
 def extract_entities(text: str) -> dict[str, list[str]]:
     """
-    Lightweight regex-based entity extraction (no spacy dependency).
-    Detects known organisations, locations, and capitalised proper nouns.
+    Uses spacy to extract proper nouns, organizations, and other entities.
     """
-    entities: dict[str, list[str]] = {"ORG": [], "PERSON": [], "GPE": []}
+    doc = nlp(text)
+    entities = {"ORG": [], "PERSON": [], "GPE": []}  # Locations
 
-    # Match known orgs
-    for org in _KNOWN_ORGS:
-        if re.search(r"\b" + re.escape(org) + r"\b", text, re.IGNORECASE):
-            if org not in entities["ORG"]:
-                entities["ORG"].append(org)
-
-    # Match known locations
-    for loc in _KNOWN_LOCS:
-        if re.search(r"\b" + re.escape(loc) + r"\b", text, re.IGNORECASE):
-            if loc not in entities["GPE"]:
-                entities["GPE"].append(loc)
-
-    # Heuristic: two consecutive Title-Case words = likely a person name
-    person_pattern = re.compile(r"\b([A-Z][a-z]+ [A-Z][a-z]+)\b")
-    for match in person_pattern.findall(text):
-        # Exclude if it looks like a job title or organisation
-        if match not in entities["ORG"] and match not in entities["GPE"]:
-            if match not in entities["PERSON"]:
-                entities["PERSON"].append(match)
+    for ent in doc.ents:
+        if ent.label_ in entities:
+            if ent.text not in entities[ent.label_]:
+                entities[ent.label_].append(ent.text)
 
     return entities
 
@@ -134,57 +110,18 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
     return text
 
 
-def redact_pii(text: str, entities: dict[str, list[str]]) -> str:
-    """
-    Redacts Personally Identifiable Information (PII) to mitigate bias.
-    Redacts Names (PERSON), specific dates/years (age/graduation bias), 
-    and gendered pronouns.
-    """
-    debiased_text = text
-    
-    # 1. Redact extracted names
-    for name in entities.get("PERSON", []):
-        debiased_text = re.sub(r"\b" + re.escape(name) + r"\b", "[REDACTED_NAME]", debiased_text, flags=re.IGNORECASE)
-        
-    # 2. Redact years (e.g., graduation years, birth years) to prevent age bias
-    # Looks for years between 1950 and 2050
-    debiased_text = re.sub(r"\b(19[5-9]\d|20[0-4]\d)\b", "[REDACTED_YEAR]", debiased_text)
-    
-    # 3. Redact gendered pronouns (He/She, Him/Her, His/Hers)
-    gender_replacements = {
-        r"\bhe\b": "they",
-        r"\bshe\b": "they",
-        r"\bhim\b": "them",
-        r"\bher\b": "them",
-        r"\bhis\b": "their",
-        r"\bhers\b": "theirs",
-        r"\bhimslef\b": "themself",
-        r"\bherself\b": "themself"
-    }
-    
-    for pattern, replacement in gender_replacements.items():
-        # Case insensitive replacement, but trying to preserve some casing is complex; 
-        # for ML models, lowercasing or just substituting is usually enough.
-        debiased_text = re.sub(pattern, replacement, debiased_text, flags=re.IGNORECASE)
-        
-    # 4. Redact potential affiliated organizations that could infer ethnicity/gender
-    biased_org_keywords = ["women", "black", "hispanic", "asian", "christian", "muslim", "jewish", "lgbt", "queer"]
-    for org in entities.get("ORG", []):
-        if any(keyword in org.lower() for keyword in biased_org_keywords):
-            debiased_text = re.sub(r"\b" + re.escape(org) + r"\b", "[REDACTED_AFFILIATION]", debiased_text, flags=re.IGNORECASE)
-
-    return debiased_text
-
 def parse_cv_text(text: str) -> dict[str, any]:
     """
     Main parser function that takes raw CV text and returns parsed structured data.
     """
     skills = extract_skills(text)
     entities = extract_entities(text)
-    debiased_text = redact_pii(text, entities)
 
-    # Simple word count using split (no spacy needed)
-    word_count = len([w for w in re.split(r"\s+", text) if w.strip()])
+    # Calculate text length metrics
+    doc = nlp(text)
+    word_count = len(
+        [token for token in doc if not token.is_punct and not token.is_space]
+    )
 
     return {
         "skills": skills,
@@ -193,7 +130,6 @@ def parse_cv_text(text: str) -> dict[str, any]:
         "locations": entities["GPE"],
         "word_count": word_count,
         "raw_text": text,
-        "debiased_text": debiased_text
     }
 
 
