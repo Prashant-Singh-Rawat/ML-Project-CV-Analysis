@@ -10,6 +10,7 @@ import {
   FiUser, FiUsers, FiStar, FiCheck, FiChevronRight, FiBriefcase,
   FiAward, FiHeart, FiFileText, FiCamera, FiPlus, FiTrash2, FiMaximize2
 } from 'react-icons/fi';
+import SkillGapAnalysis from "../components/SkillGapAnalysis";
 import html2pdf from 'html2pdf.js';
 import SoftwareEngineerTemplate from '../components/templates/SoftwareEngineerTemplate';
 import DataScientistTemplate from '../components/templates/DataScientistTemplate';
@@ -540,7 +541,12 @@ export default function Analyze() {
               </div>
 
               {/* 3-D Scanner */}
-              <ResumeGraderScanner />
+              <div className="w-full">
+                <ResumeGraderScanner />
+                <div className="max-w-4xl mx-auto mt-8 hidden">
+                  <SkillGapAnalysis missingSkills={["Python", "React", "Docker"]} />
+                </div>
+              </div>
 
               {/* Options */}
               <div className="grid md:grid-cols-2 gap-6 mt-8 max-w-3xl mx-auto">
