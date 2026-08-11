@@ -1,19 +1,78 @@
 import os
-
-import joblib
+import logging
 import pandas as pd
+import joblib
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report, accuracy_score
+from ml_pipeline.synthetic_data import (
+    COMPANY_REQUIREMENTS,
+    generate_synthetic_data,
+    COMPANIES,
+)
 
 # ── BERT Semantic Matcher ───────────────────────────────────────────────────
 # Import lazily — the model only loads into RAM when first needed
 from ml_pipeline.semantic_matcher import semantic_skill_match
-from ml_pipeline.synthetic_data import (
-    COMPANIES,
-    COMPANY_REQUIREMENTS,
-    generate_synthetic_data,
-)
+
+# ── Logging and model path ──────────────────────────────────────────────────
+logger = logging.getLogger(__name__)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, "model.pkl")
+METRICS_PATH = os.path.join(BASE_DIR, "metrics.joblib")
+FEATURES_PATH = os.path.join(BASE_DIR, "features.joblib")
+
+
+def _train_and_save():
+    """
+    Train the RandomForestClassifier from synthetic data and persist
+    the model, metrics, and feature names.
+    """
+    logger.info("model.pkl not found — training from synthetic_data.py ...")
+    df = generate_synthetic_data(10000)
+
+    # Encode and prepare features
+    df_encoded = pd.get_dummies(df, columns=["TargetCompany"])
+    X = df_encoded.drop(
+        ["PlacementProbability", "PlacementStatus", "Skills"], axis=1
+    )
+    y = df["PlacementStatus"]
+    feature_names = X.columns.tolist()
+
+    # Train / test split
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+
+    # Evaluate
+    y_pred = model.predict(X_test)
+    acc = accuracy_score(y_test, y_pred)
+    report = classification_report(y_test, y_pred, output_dict=True)
+
+    metrics = {
+        "accuracy": round(acc, 4),
+        "precision": round(report["weighted avg"]["precision"], 4),
+        "recall": round(report["weighted avg"]["recall"], 4),
+        "f1_score": round(report["weighted avg"]["f1-score"], 4),
+    }
+
+    # Persist all artifacts
+    joblib.dump(model, MODEL_PATH)
+    joblib.dump(metrics, METRICS_PATH)
+    joblib.dump(feature_names, FEATURES_PATH)
+
+    logger.info("Model trained and saved to %s", MODEL_PATH)
+    return model
+
+
+def load_model():
+    """Return the trained model, auto‑training it if missing."""
+    if not os.path.exists(MODEL_PATH):
+        return _train_and_save()
+    return joblib.load(MODEL_PATH)
 
 
 class ModelManager:
@@ -27,64 +86,37 @@ class ModelManager:
         self.features_path = os.path.join(self.base_path, "features.joblib")
 
     def load_models(self):
-        try:
-            if (
-                os.path.exists(self.model_path)
-                and os.path.exists(self.metrics_path)
-                and os.path.exists(self.features_path)
-            ):
-                self.model = joblib.load(self.model_path)
-                self.metrics = joblib.load(self.metrics_path)
-                self.feature_names = joblib.load(self.features_path)
-                return True
-        except Exception as e:
-            print(f"Error loading models: {e}")
-        return False
+        """Load all artifacts, auto‑training if model is missing."""
+        self.model = load_model()  # ensures model exists
+        if os.path.exists(self.metrics_path):
+            self.metrics = joblib.load(self.metrics_path)
+        else:
+            self.metrics = None
+        if os.path.exists(self.features_path):
+            self.feature_names = joblib.load(self.features_path)
+        else:
+            self.feature_names = None
+        return True
 
     def train_models(self):
-        print("Training real ML model (RandomForest)...")
-        df = generate_synthetic_data(10000)
-        df_encoded = pd.get_dummies(df, columns=["TargetCompany"])
-        X = df_encoded.drop(
-            ["PlacementProbability", "PlacementStatus", "Skills"], axis=1
-        )
-        y = df["PlacementStatus"]
-        self.feature_names = X.columns.tolist()
-
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42
-        )
-        self.model = RandomForestClassifier(n_estimators=100, random_state=42)
-        self.model.fit(X_train, y_train)
-
-        y_pred = self.model.predict(X_test)
-        acc = accuracy_score(y_test, y_pred)
-        report = classification_report(y_test, y_pred, output_dict=True)
-
-        self.metrics = {
-            "accuracy": round(acc, 4),
-            "precision": round(report["weighted avg"]["precision"], 4),
-            "recall": round(report["weighted avg"]["recall"], 4),
-            "f1_score": round(report["weighted avg"]["f1-score"], 4),
-        }
-
-        joblib.dump(self.model, self.model_path)
-        joblib.dump(self.metrics, self.metrics_path)
-        joblib.dump(self.feature_names, self.features_path)
-        print(f"Model trained with accuracy: {acc}")
+        """(Re)train and persist the model, metrics, and feature names."""
+        _train_and_save()
+        # Reload the freshly saved artifacts
+        self.model = joblib.load(self.model_path)
+        self.metrics = joblib.load(self.metrics_path)
+        self.feature_names = joblib.load(self.features_path)
+        print(f"Model trained with accuracy: {self.metrics['accuracy']}")
         return True
 
     def predict(self, candidate_cgpa, target_company, candidate_skills):
         if self.model is None:
-            self.load_models() or self.train_models()
+            self.load_models()  # will auto‑train if needed
 
         req_skills = COMPANY_REQUIREMENTS.get(target_company, {}).get(
             "required_skills", []
         )
 
         # ── BERT Semantic Skill Matching ──────────────────────────────────────
-        # Replaces exact set intersection with BERT embedding similarity.
-        # "neural network training" now correctly matches "Machine Learning".
         if req_skills and candidate_skills:
             bert_result = semantic_skill_match(
                 candidate_skills, req_skills, similarity_threshold=0.55
@@ -130,18 +162,6 @@ class ModelManager:
             )
             display_prob = skill_match_pct * 0.7 + candidate_cgpa * 3
 
-        # ── Benchmark ONNX Latency vs Standard ──────────────────────────────
-        import time
-        try:
-            from ml_pipeline.onnx_inference import get_onnx_manager
-            onnx_manager = get_onnx_manager()
-            # Simulate sub-second inference speed up measurement
-            _start = time.time()
-            _mock_onnx_embeddings = onnx_manager.encode(candidate_skills)
-            onnx_latency = time.time() - _start
-        except Exception:
-            onnx_latency = 0.0
-
         return {
             "placement_probability": round(display_prob, 2),
             "placement_status": placement_status,
@@ -149,8 +169,6 @@ class ModelManager:
             "matched_skills": matched,
             "missing_skills": missing,
             "match_details": match_details,
-            "inference_backend": "ONNX Runtime (Optimized)" if onnx_latency > 0 else "PyTorch (Standard)",
-            "onnx_latency_seconds": round(onnx_latency, 4)
         }
 
 

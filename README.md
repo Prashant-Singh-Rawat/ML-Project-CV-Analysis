@@ -107,6 +107,15 @@ python -m venv .venv
 # source .venv/bin/activate     # Mac/Linux
 
 pip install -r requirements.txt
+> **Note:** The ML model (`model.pkl`) is not committed to this repository.
+> It will be **automatically trained** the first time the backend starts up
+> using `backend/ml_pipeline/synthetic_data.py`. This takes ~10–30 seconds
+> on first boot and is a one-time cost per environment.
+>
+> To regenerate manually at any time:
+> ```bash
+> python -c "from ml_pipeline.model_manager import load_model; load_model()"
+> ```
 uvicorn main:app --reload
 # API available at http://localhost:8000
 # Swagger docs at http://localhost:8000/docs

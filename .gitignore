@@ -33,8 +33,12 @@ frontend/.dist/
 # YOLO Badge Trigger
 # Pair Extraordinaire Trigger
 
-# Database files — must never be committed
+# ML model artifacts — generated at runtime, never committed
+backend/ml_pipeline/model.pkl
+*.pkl
+
+# Database files — sensitive, generated at runtime
 *.db
 *.sqlite
-backend/**/*.db
-backend/**/*.sqlite
+backend/auth/*.db
+backend/auth/*.sqlite
