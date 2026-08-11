@@ -30,5 +30,11 @@ backend/ml_pipeline/models/*.pkl
 frontend/.dist/
 **/dist/
 
-# Temporary scripts
-process_github_all.py
+# YOLO Badge Trigger
+# Pair Extraordinaire Trigger
+
+# Database files — must never be committed
+*.db
+*.sqlite
+backend/**/*.db
+backend/**/*.sqlite

@@ -1,15 +1,34 @@
 import math
 import random
 import re
-from typing import Any
-
-from fastapi import APIRouter, HTTPException
+import math
+from main import limiter, RATE_FEATURES_HVY, RATE_FEATURES_LGT
 from ml_pipeline.semantic_matcher import semantic_skill_match
 from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/features", tags=["Enhancement Features"])
 
 # ─── PYDANTIC MODELS ───
+
+@router.post("/rewrite")
+@limiter.limit(RATE_FEATURES_HVY)
+async def rewrite(request: Request, ...):
+    ...
+
+@router.post("/ats-score")
+@limiter.limit(RATE_FEATURES_HVY)
+async def ats_score(request: Request, ...):
+    ...
+
+@router.post("/salary-predict")
+@limiter.limit(RATE_FEATURES_LGT)
+async def salary_predict(request: Request, ...):
+    ...
+
+@router.post("/jd-match")
+@limiter.limit(RATE_FEATURES_LGT)
+async def jd_match(request: Request, ...):
+    ...
 
 
 class RewriteRequest(BaseModel):

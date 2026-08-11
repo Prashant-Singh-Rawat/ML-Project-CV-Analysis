@@ -1,19 +1,25 @@
 import os
 from datetime import datetime
-from urllib.parse import urlencode
 
 import httpx
-from fastapi import APIRouter, Header, HTTPException, Request
-from fastapi.responses import RedirectResponse
-from pydantic import BaseModel
-
-from . import auth_utils, oauth_store, user_db
+from . import user_db, auth_utils
+from main import limiter, RATE_AUTH
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 # ── Request / Response Models ─────────────────────────────────────────────────
 
+
+@router.post("/login")
+@limiter.limit(RATE_AUTH)
+async def login(request: Request, ...):
+    ...
+
+@router.post("/register")
+@limiter.limit(RATE_AUTH)
+async def register(request: Request, ...):
+    ...
 
 class RegisterRequest(BaseModel):
     email: str
@@ -138,44 +144,25 @@ async def register(req: RegisterRequest):
 
 
 class UpdateSettingsRequest(BaseModel):
+    email: str
     phone: str | None = None
     updates_enabled: bool
-    # Optional legacy field — ignored. Identity comes from the JWT.
-    email: str | None = None
 
 
 @router.post(
     "/update-settings",
     summary="Update user email, phone, and notification subscription",
 )
-async def update_settings(
-    req: UpdateSettingsRequest,
-    authorization: str = Header(None),
-):
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Not authenticated.")
-
-    token = authorization.split(" ", 1)[1]
-    payload = auth_utils.verify_token(token)
-    if not payload or not payload.get("sub"):
-        raise HTTPException(
-            status_code=401, detail="Invalid or expired token. Please log in again."
-        )
-
-    email = payload["sub"]
-    existing = user_db.get_user_by_email(email)
-    if not existing:
-        raise HTTPException(status_code=404, detail="User not found.")
-
+async def update_settings(req: UpdateSettingsRequest):
     conn = user_db.get_connection()
     c = conn.cursor()
     c.execute(
         "UPDATE users SET phone = ?, updates_enabled = ? WHERE email = ?",
-        (req.phone, 1 if req.updates_enabled else 0, email),
+        (req.phone, 1 if req.updates_enabled else 0, req.email),
     )
     conn.commit()
     conn.close()
-    updated = user_db.get_user_by_email(email)
+    updated = user_db.get_user_by_email(req.email)
     if not updated:
         raise HTTPException(status_code=404, detail="User not found.")
     return {
@@ -206,8 +193,8 @@ async def login(req: LoginRequest):
     if not user.get("hashed_password") or not auth_utils.verify_password(
         req.password, user["hashed_password"]
     ):
-        attempts = user_db.increment_failed_attempts(req.email)
-        attempts_left = max(0, 5 - attempts)
+        user_db.increment_failed_attempts(req.email)
+        attempts_left = max(0, 5 - (user.get("failed_attempts", 0) + 1))
         raise HTTPException(
             status_code=401,
             detail=f"Invalid email or password. {attempts_left} attempt(s) remaining before lockout.",
@@ -233,41 +220,38 @@ async def login(req: LoginRequest):
 async def google_auth(req: GoogleAuthRequest):
     """
     Accepts the Google ID token from the Google Identity Services library.
-    Verifies the token with Google, then uses verified sub/email only.
+    In production, verify the token with google-auth-library.
+    For now we trust the sub (google_id) as identifier.
     """
-    try:
-        verified = await auth_utils.verify_google_id_token(req.google_id_token)
-    except ValueError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
-
-    email = verified["email"]
-    google_id = verified["google_id"]
-    name = verified["name"]
-
-    # 1. Check by verified google_id first
-    user = user_db.get_user_by_google_id(google_id)
+    # Check by google_id first
+    user = user_db.get_user_by_google_id(req.google_id)
 
     if user:
-        # Returning Google user — update device fingerprint & last login
-        user_db.update_device_fingerprint(user["email"], req.device_fingerprint)
+        # Returning Google user — enforce device binding
+        if user["device_fingerprint"] != req.device_fingerprint:
+            raise HTTPException(
+                status_code=403,
+                detail="🔒 Security Alert: This Google account is registered on a different device. "
+                "Access denied.",
+            )
         user_db.update_last_login(user["email"])
-        user = user_db.get_user_by_email(user["email"])
         return _build_token_response(user, req.device_fingerprint)
 
-    # 2. Check if email is already registered (password account) -> link Google ID
-    existing_by_email = user_db.get_user_by_email(email)
+    # New Google user — check if email already used with password
+    existing_by_email = user_db.get_user_by_email(req.email)
     if existing_by_email:
-        user_db.link_google_account(email, google_id, req.device_fingerprint)
-        user = user_db.get_user_by_email(email)
-        return _build_token_response(user, req.device_fingerprint)
+        raise HTTPException(
+            status_code=409,
+            detail="This email is already registered with a password account. Please log in with email/password.",
+        )
 
-    # 3. Create new Google user from verified claims
+    # Create new account (no password for Google users)
     user = user_db.create_user(
-        email=email,
-        name=name,
+        email=req.email,
+        name=req.name,
         hashed_password=None,
         device_fingerprint=req.device_fingerprint,
-        google_id=google_id,
+        google_id=req.google_id,
     )
 
     if not user:
@@ -284,38 +268,21 @@ async def github_login():
             status_code=500, detail="GitHub OAuth is not configured on this server."
         )
 
-    state = oauth_store.create_oauth_state()
-    params = urlencode(
-        {
-            "client_id": client_id,
-            "scope": "user:email",
-            "state": state,
-        }
-    )
-    return RedirectResponse(
-        url=f"https://github.com/login/oauth/authorize?{params}"
-    )
+    # Redirect to GitHub authorization page
+    redirect_uri = f"https://github.com/login/oauth/authorize?client_id={client_id}&scope=user:email"
+    return RedirectResponse(url=redirect_uri)
 
 
 @router.get("/github/callback", summary="Handle GitHub OAuth Callback")
-async def github_callback(
-    code: str,
-    request: Request,
-    state: str | None = None,
-):
+async def github_callback(code: str, request: Request):
     client_id = os.environ.get("GITHUB_CLIENT_ID")
     client_secret = os.environ.get("GITHUB_CLIENT_SECRET")
     frontend_url = os.environ.get(
         "FRONTEND_URL", "https://prashant-singh-rawat.github.io/ML-Project-CV-Analysis"
-    ).rstrip("/")
+    )
 
     if not client_id or not client_secret:
         raise HTTPException(status_code=500, detail="GitHub OAuth is not configured.")
-
-    if not oauth_store.consume_oauth_state(state):
-        raise HTTPException(
-            status_code=400, detail="Invalid or expired OAuth state. Please try again."
-        )
 
     async with httpx.AsyncClient() as client:
         # 1. Exchange code for access token
@@ -389,27 +356,17 @@ async def github_callback(
                 status_code=500, detail="Failed to create GitHub account."
             )
 
-    session = _build_token_response(user, device_fingerprint)
-    auth_code = oauth_store.create_auth_code(session)
-    return RedirectResponse(url=f"{frontend_url}/?auth_code={auth_code}")
+    # Generate JWT token
+    token = auth_utils.create_access_token(
+        {
+            "sub": user["email"],
+            "device": device_fingerprint,
+            "name": user["name"],
+        }
+    )
 
-
-class GitHubExchangeRequest(BaseModel):
-    auth_code: str
-
-
-@router.post(
-    "/github/exchange",
-    response_model=TokenResponse,
-    summary="Exchange one-time GitHub auth code for a JWT session",
-)
-async def github_exchange(req: GitHubExchangeRequest):
-    session = oauth_store.consume_auth_code(req.auth_code)
-    if not session:
-        raise HTTPException(
-            status_code=400, detail="Invalid or expired auth code. Please sign in again."
-        )
-    return session
+    # Redirect to frontend with the token
+    return RedirectResponse(url=f"{frontend_url}/?token={token}")
 
 
 @router.get("/me", summary="Get current user info")

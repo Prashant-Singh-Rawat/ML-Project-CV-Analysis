@@ -4,6 +4,18 @@ import random
 import re
 import time
 import urllib.request
+from fastapi.responses import JSONResponse
+import os
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+from utils.logger import logger
+from utils.middleware import RequestIDMiddleware, TimingMiddleware
+
+from utils.cv_parser import parse_cv_text, extract_text_from_pdf
+from ml_pipeline.model_manager import ModelManager
+from ml_pipeline.synthetic_data import COMPANIES
 
 # Auth
 from auth import resume_history_db
@@ -22,6 +34,39 @@ from routes.resume_history import router as resume_history_router
 from utils.cv_parser import extract_text_from_pdf, parse_cv_text
 from utils.logger import logger
 from utils.middleware import RequestIDMiddleware, TimingMiddleware
+
+def _validate_env():
+    """Fail fast if security-critical env vars are misconfigured."""
+    jwt_secret = os.getenv("JWT_SECRET_KEY", "")
+    if not jwt_secret:
+        print(
+            "[STARTUP ERROR] JWT_SECRET_KEY is not set.\n"
+            "Generate one with:\n"
+            "  python -c \"import secrets; print(secrets.token_hex(32))\"\n"
+            "Then set it in your .env file.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    if len(jwt_secret) < 32:
+        print(
+            f"[STARTUP ERROR] JWT_SECRET_KEY is too short ({len(jwt_secret)} chars).\n"
+            "Minimum required: 32 characters.\n"
+            "Generate a secure one with:\n"
+            "  python -c \"import secrets; print(secrets.token_hex(32))\"",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+_validate_env()  # Called at module load time before any endpoint is registered
+
+# Limits are configurable via environment variables so operators can tune
+# them without code changes.
+RATE_ANALYZE      = os.getenv("RATE_ANALYZE",     "5/minute")
+RATE_FEATURES_HVY = os.getenv("RATE_FEATURES_HVY", "10/minute")
+RATE_FEATURES_LGT = os.getenv("RATE_FEATURES_LGT", "20/minute")
+RATE_AUTH         = os.getenv("RATE_AUTH",          "10/minute")
+
+limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(title="TonyCV API", version="2.0.0")
 
@@ -58,6 +103,8 @@ logger.info(
 app.add_middleware(TimingMiddleware)
 app.add_middleware(RequestIDMiddleware)
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Global Exception Handler
 @app.exception_handler(Exception)
@@ -468,6 +515,7 @@ async def get_market_pulse():
 
 
 @app.post("/analyze", response_model=AnalysisResponse)
+@limiter.limit(RATE_ANALYZE)
 async def analyze_cv(
     cv_file: UploadFile = File(...),
     cgpa: float | None = Form(None),
