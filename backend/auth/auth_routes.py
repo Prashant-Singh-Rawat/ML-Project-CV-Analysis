@@ -213,10 +213,19 @@ async def login(req: LoginRequest):
 async def google_auth(req: GoogleAuthRequest):
     """
     Accepts the Google ID token from the Google Identity Services library.
-    Verifies sub (google_id) and email to sign in or register seamlessly.
+    Verifies the token with Google, then uses verified sub/email only.
     """
-    # 1. Check by google_id first
-    user = user_db.get_user_by_google_id(req.google_id)
+    try:
+        verified = await auth_utils.verify_google_id_token(req.google_id_token)
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+    email = verified["email"]
+    google_id = verified["google_id"]
+    name = verified["name"]
+
+    # 1. Check by verified google_id first
+    user = user_db.get_user_by_google_id(google_id)
 
     if user:
         # Returning Google user — update device fingerprint & last login
@@ -226,19 +235,19 @@ async def google_auth(req: GoogleAuthRequest):
         return _build_token_response(user, req.device_fingerprint)
 
     # 2. Check if email is already registered (password account) -> link Google ID
-    existing_by_email = user_db.get_user_by_email(req.email)
+    existing_by_email = user_db.get_user_by_email(email)
     if existing_by_email:
-        user_db.link_google_account(req.email, req.google_id, req.device_fingerprint)
-        user = user_db.get_user_by_email(req.email)
+        user_db.link_google_account(email, google_id, req.device_fingerprint)
+        user = user_db.get_user_by_email(email)
         return _build_token_response(user, req.device_fingerprint)
 
-    # 3. Create new Google user
+    # 3. Create new Google user from verified claims
     user = user_db.create_user(
-        email=req.email,
-        name=req.name,
+        email=email,
+        name=name,
         hashed_password=None,
         device_fingerprint=req.device_fingerprint,
-        google_id=req.google_id,
+        google_id=google_id,
     )
 
     if not user:

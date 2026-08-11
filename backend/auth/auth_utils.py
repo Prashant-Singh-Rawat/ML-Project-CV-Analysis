@@ -75,3 +75,56 @@ def verify_token(token: str) -> dict | None:
         return payload
     except JWTError:
         return None
+
+
+# ── Google ID Token Verification ─────────────────────────────────────────────
+_GOOGLE_ISSUERS = {"accounts.google.com", "https://accounts.google.com"}
+
+
+async def verify_google_id_token(id_token: str) -> dict:
+    """
+    Cryptographically validate a Google Identity Services ID token via tokeninfo.
+    Returns verified claims: email, google_id (sub), name.
+    Raises ValueError on any validation failure.
+    """
+    import httpx
+
+    if not id_token or not isinstance(id_token, str) or not id_token.strip():
+        raise ValueError("Google ID token is required.")
+
+    client_id = os.environ.get("GOOGLE_CLIENT_ID", "").strip()
+    if not client_id:
+        raise ValueError("GOOGLE_CLIENT_ID is not configured on this server.")
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                "https://oauth2.googleapis.com/tokeninfo",
+                params={"id_token": id_token.strip()},
+            )
+    except httpx.HTTPError as exc:
+        raise ValueError(f"Failed to reach Google token verification service: {exc}") from exc
+
+    if resp.status_code != 200:
+        raise ValueError("Invalid or expired Google ID token.")
+
+    claims = resp.json()
+    if claims.get("aud") != client_id:
+        raise ValueError("Google ID token audience mismatch.")
+    if claims.get("iss") not in _GOOGLE_ISSUERS:
+        raise ValueError("Invalid Google ID token issuer.")
+
+    email = claims.get("email")
+    sub = claims.get("sub")
+    if not email or not sub:
+        raise ValueError("Google ID token missing required claims.")
+
+    email_verified = claims.get("email_verified")
+    if email_verified in (False, "false", "False", 0, "0"):
+        raise ValueError("Google email address is not verified.")
+
+    return {
+        "email": email,
+        "google_id": str(sub),
+        "name": claims.get("name") or email.split("@")[0],
+    }
