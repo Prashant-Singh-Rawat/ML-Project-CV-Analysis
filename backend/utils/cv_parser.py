@@ -4,7 +4,6 @@ import re
 import pdfplumber
 
 from ml_pipeline.synthetic_data import SKILLS_DB
-from ml_pipeline.entity_resolver import get_entity_resolver
 from ml_pipeline.anomaly_detector import get_anomaly_detector
 from ml_pipeline.question_generator import generate_interview_questions
 from ml_pipeline.contrastive_matcher import get_contrastive_matcher
@@ -147,13 +146,6 @@ def _extract_mock_summary(text: str) -> str:
     """Extracts a short snippet from the text to serve as the summary for generation."""
     return text[:300] if len(text) > 300 else text
 
-def _extract_mock_university(text: str) -> str:
-    """Mock heuristic to extract a university name."""
-    match = re.search(r"(?:University of [A-Z][a-z]+|[A-Z][a-z]+ University|MIT|IIT\s?[A-Za-z]*)", text)
-    if match:
-        return match.group(0)
-    return ""
-
 
 def extract_text_from_pdf(file_bytes: bytes) -> str:
     """
@@ -174,12 +166,21 @@ def parse_cv_text(text: str, jd_text: str = None) -> dict[str, any]:
     """
     skills = extract_skills(text)
     entities = extract_entities(text)
-    years_exp, seniority = _estimate_experience_and_seniority(text)
 
-    # Entity Resolution for Education
-    raw_university = _extract_mock_university(text)
-    resolver = get_entity_resolver()
-    education_resolution = resolver.resolve_institution(raw_university)
+    # Anomaly Detection
+    years, seniority = _estimate_experience_and_seniority(text)
+    anomaly_detector = get_anomaly_detector()
+    anomalies = anomaly_detector.detect_anomalies(years, seniority)
+    
+    # Generative AI Interview Questions
+    summary = _extract_mock_summary(text)
+    interview_questions = generate_interview_questions(skills, summary)
+    
+    # JD Matching
+    jd_match_result = None
+    if jd_text:
+        jd_matcher = get_contrastive_matcher()
+        jd_match_result = jd_matcher.match_cv_to_jd(text, jd_text)
 
     # Simple word count using split (no spacy needed)
     word_count = len([w for w in re.split(r"\s+", text) if w.strip()])
@@ -191,7 +192,9 @@ def parse_cv_text(text: str, jd_text: str = None) -> dict[str, any]:
         "locations": entities["GPE"],
         "word_count": word_count,
         "raw_text": text,
-        "education_resolution": education_resolution
+        "work_history_anomalies": anomalies,
+        "interview_questions": interview_questions,
+        "jd_match_result": jd_match_result
     }
 
 
