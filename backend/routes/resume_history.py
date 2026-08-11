@@ -2,7 +2,8 @@ import re
 from typing import Any
 
 from auth import resume_history_db
-from fastapi import APIRouter, HTTPException
+from auth.auth_utils import get_current_user
+from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/resume-history", tags=["Resume History"])
@@ -62,25 +63,35 @@ KNOWN_RESUME_SKILLS = [
 
 
 class ResumeHistoryCreateRequest(BaseModel):
-    user_id: int
+    # Kept optional for backward compatibility with older clients; ignored for auth.
+    user_id: int | None = None
     resume_name: str | None = None
     analysis_result: dict[str, Any]
 
 
 class ResumeHistoryCompareRequest(BaseModel):
-    user_id: int
+    # Kept optional for backward compatibility; authorization uses the JWT subject.
+    user_id: int | None = None
     base_version_id: int = Field(..., description="Older resume version id")
     target_version_id: int = Field(..., description="Newer resume version id")
 
 
+def _require_user(authorization: str | None) -> dict:
+    return get_current_user(authorization)
+
+
 @router.post("")
-async def save_resume_version(req: ResumeHistoryCreateRequest):
+async def save_resume_version(
+    req: ResumeHistoryCreateRequest,
+    authorization: str | None = Header(None),
+):
+    user = _require_user(authorization)
     if not req.analysis_result:
         raise HTTPException(status_code=400, detail="Analysis result is required.")
 
     parsed = _extract_snapshot(req.analysis_result)
     return resume_history_db.create_resume_version(
-        user_id=req.user_id,
+        user_id=user["id"],
         resume_name=req.resume_name or "Resume analysis",
         ats_score=parsed["ats_score"],
         skills=parsed["skills"],
@@ -92,18 +103,30 @@ async def save_resume_version(req: ResumeHistoryCreateRequest):
 
 
 @router.get("/{user_id}")
-async def get_resume_history(user_id: int):
-    return {"versions": resume_history_db.list_resume_versions(user_id)}
+async def get_resume_history(
+    user_id: int,
+    authorization: str | None = Header(None),
+):
+    user = _require_user(authorization)
+    if user_id != user["id"]:
+        raise HTTPException(
+            status_code=403, detail="Cannot access another user's resume history."
+        )
+    return {"versions": resume_history_db.list_resume_versions(user["id"])}
 
 
 @router.post("/compare")
-async def compare_resume_versions(req: ResumeHistoryCompareRequest):
+async def compare_resume_versions(
+    req: ResumeHistoryCompareRequest,
+    authorization: str | None = Header(None),
+):
+    user = _require_user(authorization)
     base = resume_history_db.get_resume_version(req.base_version_id)
     target = resume_history_db.get_resume_version(req.target_version_id)
 
     if not base or not target:
         raise HTTPException(status_code=404, detail="Resume version not found.")
-    if base["user_id"] != req.user_id or target["user_id"] != req.user_id:
+    if base["user_id"] != user["id"] or target["user_id"] != user["id"]:
         raise HTTPException(
             status_code=403, detail="Cannot compare another user's resume versions."
         )

@@ -77,54 +77,29 @@ def verify_token(token: str) -> dict | None:
         return None
 
 
-# ── Google ID Token Verification ─────────────────────────────────────────────
-_GOOGLE_ISSUERS = {"accounts.google.com", "https://accounts.google.com"}
-
-
-async def verify_google_id_token(id_token: str) -> dict:
+def get_current_user(authorization: str | None = None) -> dict:
     """
-    Cryptographically validate a Google Identity Services ID token via tokeninfo.
-    Returns verified claims: email, google_id (sub), name.
-    Raises ValueError on any validation failure.
+    Resolve the authenticated user from an Authorization: Bearer <jwt> header.
+    Raises fastapi.HTTPException on failure so route handlers stay thin.
     """
-    import httpx
+    from fastapi import HTTPException
 
-    if not id_token or not isinstance(id_token, str) or not id_token.strip():
-        raise ValueError("Google ID token is required.")
+    from . import user_db
 
-    client_id = os.environ.get("GOOGLE_CLIENT_ID", "").strip()
-    if not client_id:
-        raise ValueError("GOOGLE_CLIENT_ID is not configured on this server.")
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated.")
 
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(
-                "https://oauth2.googleapis.com/tokeninfo",
-                params={"id_token": id_token.strip()},
-            )
-    except httpx.HTTPError as exc:
-        raise ValueError(f"Failed to reach Google token verification service: {exc}") from exc
+    token = authorization.split(" ", 1)[1].strip()
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated.")
 
-    if resp.status_code != 200:
-        raise ValueError("Invalid or expired Google ID token.")
+    payload = verify_token(token)
+    if not payload or not payload.get("sub"):
+        raise HTTPException(
+            status_code=401, detail="Invalid or expired token. Please log in again."
+        )
 
-    claims = resp.json()
-    if claims.get("aud") != client_id:
-        raise ValueError("Google ID token audience mismatch.")
-    if claims.get("iss") not in _GOOGLE_ISSUERS:
-        raise ValueError("Invalid Google ID token issuer.")
-
-    email = claims.get("email")
-    sub = claims.get("sub")
-    if not email or not sub:
-        raise ValueError("Google ID token missing required claims.")
-
-    email_verified = claims.get("email_verified")
-    if email_verified in (False, "false", "False", 0, "0"):
-        raise ValueError("Google email address is not verified.")
-
-    return {
-        "email": email,
-        "google_id": str(sub),
-        "name": claims.get("name") or email.split("@")[0],
-    }
+    user = user_db.get_user_by_email(payload["sub"])
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    return user
