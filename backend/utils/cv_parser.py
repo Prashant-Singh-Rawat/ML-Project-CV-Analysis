@@ -52,7 +52,7 @@ def extract_skills(text: str) -> list[str]:
     # 1. Regex/Taxonomy based extraction (fast path)
     for skill in SKILLS_DB:
         skill_clean = skill.lower().replace(".", " ").replace("-", " ")
-        pattern = r"\b" + re.escape(skill_clean) + r"\b"
+        pattern = r"(?<!\w)" + re.escape(skill_clean) + r"(?!\w)"
         if re.search(pattern, text_lower):
             found_skills.add(skill)
         elif skill.lower() in text_lower:
