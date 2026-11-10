@@ -2,38 +2,52 @@ import asyncio
 import os
 import random
 import re
+import sys
 import time
 import urllib.request
+
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import os
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
+from pydantic import BaseModel
 
-from utils.logger import logger
-from utils.middleware import RequestIDMiddleware, TimingMiddleware
-
-from utils.cv_parser import parse_cv_text, extract_text_from_pdf
-from ml_pipeline.model_manager import ModelManager
-from ml_pipeline.synthetic_data import COMPANIES
-
-# Auth
 from auth import resume_history_db
 from auth import user_db as auth_db
 from auth.auth_routes import router as auth_router
-from routers import federated
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from ml_pipeline.model_manager import ModelManager
 from ml_pipeline.semantic_matcher import semantic_skill_match
 from ml_pipeline.synthetic_data import COMPANIES
-from pydantic import BaseModel
+from routers import federated
 from routes.features import router as features_router
 from routes.resume_history import router as resume_history_router
 from utils.cv_parser import extract_text_from_pdf, parse_cv_text
+from utils.limiter import (
+    limiter,
+    HAS_SLOWAPI,
+    RateLimitExceeded,
+    _rate_limit_exceeded_handler,
+    RATE_ANALYZE,
+    RATE_FEATURES_HVY,
+    RATE_FEATURES_LGT,
+    RATE_AUTH,
+)
 from utils.logger import logger
 from utils.middleware import RequestIDMiddleware, TimingMiddleware
+
+def _load_dotenv_if_present():
+    for env_path in [".env", os.path.join(os.path.dirname(__file__), ".env"), os.path.join(os.path.dirname(__file__), "..", ".env")]:
+        if os.path.isfile(env_path):
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        k = k.strip()
+                        v = v.strip().strip("'\"")
+                        if k not in os.environ:
+                            os.environ[k] = v
+
+_load_dotenv_if_present()
 
 def _validate_env():
     """Fail fast if security-critical env vars are misconfigured."""
@@ -58,15 +72,6 @@ def _validate_env():
         sys.exit(1)
 
 _validate_env()  # Called at module load time before any endpoint is registered
-
-# Limits are configurable via environment variables so operators can tune
-# them without code changes.
-RATE_ANALYZE      = os.getenv("RATE_ANALYZE",     "5/minute")
-RATE_FEATURES_HVY = os.getenv("RATE_FEATURES_HVY", "10/minute")
-RATE_FEATURES_LGT = os.getenv("RATE_FEATURES_LGT", "20/minute")
-RATE_AUTH         = os.getenv("RATE_AUTH",          "10/minute")
-
-limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(title="TonyCV API", version="2.0.0")
 
@@ -103,8 +108,9 @@ logger.info(
 app.add_middleware(TimingMiddleware)
 app.add_middleware(RequestIDMiddleware)
 
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+if HAS_SLOWAPI:
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Global Exception Handler
 @app.exception_handler(Exception)
@@ -517,6 +523,7 @@ async def get_market_pulse():
 @app.post("/analyze", response_model=AnalysisResponse)
 @limiter.limit(RATE_ANALYZE)
 async def analyze_cv(
+    request: Request,
     cv_file: UploadFile = File(...),
     cgpa: float | None = Form(None),
     target_company: str | None = Form(None),

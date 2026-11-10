@@ -1,4 +1,5 @@
 import io
+import os
 import re
 import sys
 
@@ -24,7 +25,10 @@ except OSError:
 from ml_pipeline.synthetic_data import SKILLS_DB
 
 
-from transformers import pipeline
+try:
+    from transformers import pipeline
+except ImportError:
+    pipeline = None
 
 # Load RoBERTa NER pipeline for skill extraction (lazy loading to save memory on startup)
 _roberta_ner_pipeline = None
@@ -32,6 +36,9 @@ _roberta_ner_pipeline = None
 def get_roberta_pipeline():
     global _roberta_ner_pipeline
     if _roberta_ner_pipeline is None:
+        if pipeline is None or os.getenv("TESTING", "").lower() in ("true", "1") or os.getenv("SKIP_HF_DOWNLOAD", "").lower() in ("true", "1"):
+            _roberta_ner_pipeline = False
+            return _roberta_ner_pipeline
         try:
             # Using a generic RoBERTa NER model; in production, this would be a fine-tuned model for skills
             _roberta_ner_pipeline = pipeline("ner", model="Jean-Baptiste/roberta-large-ner-english", aggregation_strategy="simple")

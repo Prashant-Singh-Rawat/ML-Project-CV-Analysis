@@ -6,7 +6,7 @@ _default_db_path = os.path.join(os.path.dirname(__file__), "users.db")
 DATABASE_PATH = os.getenv("DB_PATH", _default_db_path)
 
 def get_connection():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
