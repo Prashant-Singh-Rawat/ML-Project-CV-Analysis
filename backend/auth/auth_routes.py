@@ -1,25 +1,18 @@
 import os
 from datetime import datetime
 
+from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi.responses import RedirectResponse
 import httpx
+from pydantic import BaseModel
+
 from . import user_db, auth_utils
-from main import limiter, RATE_AUTH
+from utils.limiter import limiter, RATE_AUTH
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 # ── Request / Response Models ─────────────────────────────────────────────────
-
-
-@router.post("/login")
-@limiter.limit(RATE_AUTH)
-async def login(request: Request, ...):
-    ...
-
-@router.post("/register")
-@limiter.limit(RATE_AUTH)
-async def register(request: Request, ...):
-    ...
 
 class RegisterRequest(BaseModel):
     email: str
@@ -105,7 +98,8 @@ def _build_token_response(user: dict, device_fingerprint: str) -> dict:
 @router.post(
     "/register", response_model=TokenResponse, summary="Register a new account"
 )
-async def register(req: RegisterRequest):
+@limiter.limit(RATE_AUTH)
+async def register(request: Request, req: RegisterRequest):
     # 1. Validate password strength
     is_strong, msg = auth_utils.validate_password_strength(req.password)
     if not is_strong:
@@ -180,7 +174,8 @@ async def update_settings(req: UpdateSettingsRequest):
 @router.post(
     "/login", response_model=TokenResponse, summary="Login with email + password"
 )
-async def login(req: LoginRequest):
+@limiter.limit(RATE_AUTH)
+async def login(request: Request, req: LoginRequest):
     # 1. Lookup user
     user = user_db.get_user_by_email(req.email)
     if not user:

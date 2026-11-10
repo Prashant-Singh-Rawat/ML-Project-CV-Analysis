@@ -1,34 +1,17 @@
 import math
 import random
 import re
-import math
-from main import limiter, RATE_FEATURES_HVY, RATE_FEATURES_LGT
-from ml_pipeline.semantic_matcher import semantic_skill_match
+from typing import Any
+
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
+
+from ml_pipeline.semantic_matcher import semantic_skill_match
+from utils.limiter import limiter, RATE_FEATURES_HVY, RATE_FEATURES_LGT
 
 router = APIRouter(prefix="/features", tags=["Enhancement Features"])
 
 # ─── PYDANTIC MODELS ───
-
-@router.post("/rewrite")
-@limiter.limit(RATE_FEATURES_HVY)
-async def rewrite(request: Request, ...):
-    ...
-
-@router.post("/ats-score")
-@limiter.limit(RATE_FEATURES_HVY)
-async def ats_score(request: Request, ...):
-    ...
-
-@router.post("/salary-predict")
-@limiter.limit(RATE_FEATURES_LGT)
-async def salary_predict(request: Request, ...):
-    ...
-
-@router.post("/jd-match")
-@limiter.limit(RATE_FEATURES_LGT)
-async def jd_match(request: Request, ...):
-    ...
 
 
 class RewriteRequest(BaseModel):
@@ -113,7 +96,8 @@ class AnalyticsRequest(BaseModel):
 
 # ─── 1. AI RESUME REWRITE ASSISTANT ───
 @router.post("/rewrite", response_model=RewriteResponse)
-async def rewrite_resume_section(req: RewriteRequest):
+@limiter.limit(RATE_FEATURES_HVY)
+async def rewrite_resume_section(request: Request, req: RewriteRequest):
     content = req.content.strip()
     if not content:
         raise HTTPException(status_code=400, detail="Content cannot be empty.")
@@ -169,7 +153,8 @@ async def rewrite_resume_section(req: RewriteRequest):
 
 # ─── 2. ATS RESUME SCORE ───
 @router.post("/ats-score", response_model=AtsScoreResponse)
-async def compute_ats_score(req: AtsScoreRequest):
+@limiter.limit(RATE_FEATURES_HVY)
+async def compute_ats_score(request: Request, req: AtsScoreRequest):
     text = req.cv_text
     skills = req.skills
 
@@ -251,7 +236,8 @@ async def compute_ats_score(req: AtsScoreRequest):
 
 # ─── 3. JOB DESCRIPTION MATCHING ───
 @router.post("/jd-match")
-async def match_job_description(req: JdMatchRequest):
+@limiter.limit(RATE_FEATURES_LGT)
+async def match_job_description(request: Request, req: JdMatchRequest):
     # Split JD into keywords/potential skills
     jd_words = set(re.findall(r"\b[a-zA-Z0-9+#.-]+\b", req.job_description.lower()))
 
@@ -632,7 +618,8 @@ async def get_resume_templates():
 
 # ─── 10. SALARY PREDICTION ───
 @router.post("/salary-predict")
-async def predict_salary_range(req: SalaryPredictionRequest):
+@limiter.limit(RATE_FEATURES_LGT)
+async def predict_salary_range(request: Request, req: SalaryPredictionRequest):
     base_salaries = {
         "Software Engineer": 70000,
         "Data Scientist": 85000,
